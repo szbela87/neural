@@ -38,7 +38,7 @@ a short user manual for the program as well.
 
 **TODO**
 * Convolutional networks (the cpu-version of the C code is ready, I have to write python scripts to building convnets)
-* Sequential networks (LSTM, GRU)
+* Sequential architectures (i.e. LSTM, GRU)
 * Applying the results for loseless compression
 * Genetic approach with Bayesian optimization for dynamic network structures
 * Writing Python wrappers
