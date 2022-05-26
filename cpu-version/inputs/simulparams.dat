@@ -16,9 +16,9 @@ mini_batch_size     128
 neuron_num          69
 input_num           8
 output_num          1
-graph_datas         ./inputs/configs/dense_exp/graph_dense_I8_O1_L4_H60.dat
-logic_datas         ./inputs/configs/dense_exp/logic_dense_I8_O1_L4_H60.dat
-fixwb_datas         ./inputs/configs/dense_exp/fixwb_dense_I8_O1_L4_H60.dat
+graph_datas         ./inputs/configs/general_imp/graph_igru_I8_O1_H25.dat
+logic_datas         ./inputs/configs/general_imp/logic_igru_I8_O1_H25.dat
+fixwb_datas         ./inputs/configs/general_imp/fixwb_igru_I8_O1_H25.dat
 
 alpha               0.0
 
