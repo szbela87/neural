@@ -10,7 +10,8 @@ neural networks since the output of the nodes during the training procedure cann
 We investigate also an even more general implicit structure, where a neuron can have multiple inputs.
 Here, after summing the signals at the inputs and activating them separately, the neuron activation value
 is the product of them. Note that convolutional networks are special cases of this architecture, and are also
-building blocks of LSTM networks. Our results are summarized in the pdf file in the `doc` directory.
+building blocks of LSTM networks. Our results are summarized in the pdf file in the `doc` directory which contains
+a short user manual for the program as well.
 
 **My original aims were:**
 * to creating a program to simulate neural networks 
