@@ -37,7 +37,7 @@ a short user manual for the program as well.
 * 26/05/22 Most of the GPU kernels are ready (not published yet)
 
 **TODO**
-* Convolutional networks (the cpu-version of the C code is ready, I have to write python scripts to building convnets)
+* Convolutional networks (the cpu-version can handle weight sharing) by python scripts
 * Sequential architectures (i.e. LSTM, GRU)
 * Applying the results for loseless compression
 * Genetic approach with Bayesian optimization for dynamic network structures
