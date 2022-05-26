@@ -1,7 +1,7 @@
 # Implicit Hypergraph Neural Networks
 
-This repository contains my thesis work for the `Mathematics expert in data analytics and machine learning
-Postgraduate specialist programme` of ELTE TTK.
+This repository contains my thesis work for the `Mathematics Expert in Data Analytics and Machine Learning
+postgraduate specialization program` of ELTE TTK.
 I have also created a C language program, a demo version of this is published here.
 The topic of my thesis is implicit neural networks.
 In a network or a graph representation of any complex system, cycles or loops correspond to feedback, which is
