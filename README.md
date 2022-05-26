@@ -2,11 +2,15 @@
 
 This repository contains my thesis or project work for the `Mathematics expert in data analytics and machine learning
 Postgraduate specialist programme` of ELTE TTK.
-I have also created a C language program, an earlier version of which is published here.
+I have also created a C language program, a demo version of this is published here.
 The topic of my thesis is implicit neural networks.
 In a network or a graph representation of any complex system, cycles or loops correspond to feedback, which is
 an important cornerstone of their operation. Such systems can be analyzed in the framework of the implicit
 neural networks since the output of the nodes during the training procedure cannot be given explicitly.
+We investigate also an even more general implicit structure, where a neuron can have multiple inputs.
+Here, after summing the signals at the inputs and activating them separately, the neuron activation value
+is the product of them. Note that convolutional networks are special cases of this architecture, and are also
+building blocks of LSTM networks.
 
 My original aims were:
 * to creating a program to simulate neural networks in which the (hyper)graphs are given by the user in a very flexible way.
@@ -31,10 +35,10 @@ My original aims were:
 * 26/05/22 Most of the GPU kernels are ready (not published yet)
 
 **TODO**
-* Convolutional networks (the C code is ready, python scripts to building convnets)
-* Sequential version
+* Convolutional networks (the cpu-version of the C code is ready, I have to write python scripts to building convnets)
+* Sequential networks (LSTM, GRU)
 * Applying the results for loseless compression
-* 
-* Python wrappers
-* Documentation webpage
-* Tutorials
+* Genetic approach with Bayesian optimization for dynamic network structures
+* Writing Python wrappers
+* Creating Documentation webpage
+* Creating Tutorials
