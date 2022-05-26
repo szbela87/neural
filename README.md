@@ -13,7 +13,8 @@ is the product of them. Note that convolutional networks are special cases of th
 building blocks of LSTM networks. Our results are summarized in the pdf file in the `doc` directory.
 
 **My original aims were:**
-* to creating a program to simulate neural networks in which the (hyper)graphs are given by the user in a very flexible way.
+* to creating a program to simulate neural networks 
+* where the (hyper)graphs which represent the network are given by the user in a very flexible way.
 * get to know the C language.
 
 **Log**
