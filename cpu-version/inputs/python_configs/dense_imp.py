@@ -20,7 +20,7 @@ for i in range(input_num):
 # hiddens
 for layer in layers[1:-1]:
     for neuron in range(layer):
-        activations_neuron = [('3',True)]
+        activations_neuron = [('2',True)]
         activations.append(activations_neuron)
             
 # output
@@ -51,7 +51,7 @@ for j in range (len(layers)-1):
         if (j>0):
             for l in range(layers[j]):
                 #if (l!=k):
-                neighbors.append((ind_from+l+1,1,False,0.0))
+                neighbors.append((ind_from+l+1,1,True))
         graph.append(neighbors)
     ind_from=ind_from+layers[j]
     

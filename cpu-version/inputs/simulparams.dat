@@ -1,0 +1,45 @@
+seed                10
+thread_num          4
+tol_fixit           1.0e-16
+maxiter_grad        20
+maxiter_fix         1000
+initdx              1.0
+sfreq               1
+input_name          ./inputs/data/pulsar.csv
+output_name         ./outputs/results.dat 
+predict_name        ./outputs/predict.dat 
+acc_name            ./outputs/acc.dat 
+data_num            17898
+learn_num           13423
+mini_batch_size     128
+
+neuron_num          69
+input_num           8
+output_num          1
+graph_datas         ./inputs/configs/dense_exp/graph_dense_I8_O1_L4_H60.dat
+logic_datas         ./inputs/configs/dense_exp/logic_dense_I8_O1_L4_H60.dat
+fixwb_datas         ./inputs/configs/dense_exp/fixwb_dense_I8_O1_L4_H60.dat
+
+alpha               0.0
+
+lossfunction_type   bce_multilabeling
+
+optimizer           2
+grad_alpha          5.0e-1
+adam_alpha          1.0e-3
+adam_beta1          0.9
+adam_beta2          0.999
+adam_eps            1.0e-8
+
+ff_optimization     0
+
+chunker             0
+chunk_treshold      1.0e-1
+
+loaddatas           0
+load_backup         ./outputs/backup4.dat
+save_backup         ./outputs/backup4.dat
+zero_optim_param    1
+
+numgrad             0
+numgrad_eps         0.1
