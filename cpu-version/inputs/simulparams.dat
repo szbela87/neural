@@ -13,7 +13,7 @@ data_num            17898
 learn_num           13423
 mini_batch_size     128
 
-neuron_num          69
+neuron_num          84
 input_num           8
 output_num          1
 graph_datas         ./inputs/configs/general_imp/graph_igru_I8_O1_H25.dat
