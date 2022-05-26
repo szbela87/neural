@@ -1,8 +1,8 @@
 # Implicit Hypergraph Neural Networks
 
 **Log**
-* 11/07/21 Read in the inputs in Python from file and create the inputs for the Fortran code.
-* 30/07/21 Create the C code and parallelised by OpenMP.
+* 11/07/21 Read in the inputs in Python from file and create the inputs for the C code.
+* 30/07/21 Create the base C code and parallelised by OpenMP.
 * 17/08/21 Rearrange the folder structure.
 * 16/09/21 Implementing the PERT method for optimizing the calculations in feedforward networks.
 * 29/09/21 Implementing the mutability of the weights.
