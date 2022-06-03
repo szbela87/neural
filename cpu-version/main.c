@@ -232,7 +232,7 @@ int main()
 
     // Read input parameters
     read_parameters("./inputs/simulparams.dat");
-    // printf("sfreq: %u\n",sfreq);
+    // printf("sfreq: %lu\n",sfreq);
 
     omp_set_num_threads(thread_num);
 
@@ -698,21 +698,21 @@ int main()
             }
 
             printf("\r");
-            printf("\n");
+            //printf("\n");
             if (mini_batch_id < mini_batch_num - 1)
             {
                 print_progress_bar(10, (mini_batch_id + 1) / (float)mini_batch_num);
-                // printf(" [%u/%u] TE: %.5f ETA: %.1fs", mini_batch_id + 1,
+                // printf(" [%lu/%lu] TE: %.5f ETA: %.1fs", mini_batch_id + 1,
                 //        mini_batch_num, error_temp,
                 //        elapsed_time_temp * mini_batch_num / (mini_batch_id + 1) - elapsed_time_temp + 0.01);
-                printf(" [%u/%u] TE: %.5f ET: %.1fs ETA: %.1fs", mini_batch_id + 1,
+                printf(" [%lu/%lu] TE: %.5f ET: %.1fs ETA: %.1fs", mini_batch_id + 1,
                        mini_batch_num, error_temp,
                        elapsed_time_temp, elapsed_time_temp * mini_batch_num / (mini_batch_id + 1) - elapsed_time_temp + 0.01);
             }
             else
             {
                 print_progress_bar(10, (mini_batch_id + 1) / (float)mini_batch_num);
-                printf(" [%u/%u] TE: %.5f ET: %.1fs", mini_batch_id + 1,
+                printf(" [%lu/%lu] TE: %.5f ET: %.1fs", mini_batch_id + 1,
                        mini_batch_num, error_temp,
                        elapsed_time_temp);
             }
@@ -758,7 +758,7 @@ int main()
 
         printf(" | ");
         print_progress_bar(10, iter_grad / (float)maxiter_grad);
-        printf(" %3lu%% [%u/%u] TE: %.5f: VE: %.5f ET: %.1fs ETA: %.1fs", iter_grad * 100 / maxiter_grad, iter_grad,
+        printf(" %3lu%% [%lu/%lu] TE: %.5f: VE: %.5f ET: %.1fs ETA: %.1fs", iter_grad * 100 / maxiter_grad, iter_grad,
                maxiter_grad, error_learn, error_valid, elapsed_time, elapsed_time * maxiter_grad / iter_grad - elapsed_time + 0.01);
 
         if (numgrad > 0)
@@ -1136,19 +1136,19 @@ void read_parameters(char file_name[100])
     if (f)
     {
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &seed);
+        fscanf(f, "%lu", &seed);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &thread_num);
+        fscanf(f, "%lu", &thread_num);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &tol_fixit);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &maxiter_grad);
+        fscanf(f, "%lu", &maxiter_grad);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &maxiter_fix);
+        fscanf(f, "%lu", &maxiter_fix);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &initdx);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &sfreq);
+        fscanf(f, "%lu", &sfreq);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", input_name);
         fscanf(f, "%s", temp_string);
@@ -1158,17 +1158,17 @@ void read_parameters(char file_name[100])
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", acc_name);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &data_num);
+        fscanf(f, "%lu", &data_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &learn_num);
+        fscanf(f, "%lu", &learn_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &mini_batch_size);
+        fscanf(f, "%lu", &mini_batch_size);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &neuron_num);
+        fscanf(f, "%lu", &neuron_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &input_num);
+        fscanf(f, "%lu", &input_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &output_num);
+        fscanf(f, "%lu", &output_num);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", graph_datas);
         fscanf(f, "%s", temp_string);
@@ -1180,7 +1180,7 @@ void read_parameters(char file_name[100])
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", lossfunction_type);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &optimizer);
+        fscanf(f, "%lu", &optimizer);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &grad_alpha);
         fscanf(f, "%s", temp_string);
@@ -1192,21 +1192,21 @@ void read_parameters(char file_name[100])
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &adam_eps);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &ff_optimization);
+        fscanf(f, "%lu", &ff_optimization);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &chunker);
+        fscanf(f, "%lu", &chunker);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &chunk_treshold);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &loaddatas);
+        fscanf(f, "%lu", &loaddatas);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", load_backup);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", save_backup);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &zero_optim_param);
+        fscanf(f, "%lu", &zero_optim_param);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%u", &numgrad);
+        fscanf(f, "%lu", &numgrad);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &numgrad_eps);
         fclose(f);
@@ -1271,7 +1271,7 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
         // Read the graph
         for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            fscanf(f_graph, "%u", &neighbour_number[neuron_id]);
+            fscanf(f_graph, "%lu", &neighbour_number[neuron_id]);
             fscanf(f_graph, "%s", temp_string);
 
             graph_n[neuron_id] = (unsigned long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long int));
@@ -1282,16 +1282,16 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
 
             for (unsigned long int i = 0; i < neighbour_number[neuron_id]; i++)
             {
-                fscanf(f_graph, "%u", &graph_n[neuron_id][i]);
+                fscanf(f_graph, "%lu", &graph_n[neuron_id][i]);
                 graph_n[neuron_id][i]--;
-                fscanf(f_graph, "%u", &graph_i[neuron_id][i]);
+                fscanf(f_graph, "%lu", &graph_i[neuron_id][i]);
                 graph_i[neuron_id][i]--;
                 fscanf(f_graph, "%s", temp_string);
             }
 
             for (unsigned long int i = 0; i < neighbour_number[neuron_id]; i++)
             {
-                fscanf(f_logic, "%u", &graph_logic[neuron_id][i]);
+                fscanf(f_logic, "%lu", &graph_logic[neuron_id][i]);
                 if (graph_logic[neuron_id][i] == 0)
                 {
                     fscanf(f_fixwb, "%f", &fix_weight[neuron_id][i]);
@@ -1302,7 +1302,7 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
             fscanf(f_logic, "%s", temp_string);
             fscanf(f_fixwb, "%s", temp_string);
 
-            fscanf(f_graph, "%u", &bias_number[neuron_id]);
+            fscanf(f_graph, "%lu", &bias_number[neuron_id]);
             fscanf(f_graph, "%s", temp_string);
 
             activation_type[neuron_id] = (unsigned long int *)malloc(bias_number[neuron_id] * sizeof(unsigned long int));
@@ -1310,12 +1310,12 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
             fix_bias[neuron_id] = (float *)malloc(bias_number[neuron_id] * sizeof(float));
             for (unsigned long int i = 0; i < bias_number[neuron_id]; i++)
             {
-                fscanf(f_graph, "%u", &activation_type[neuron_id][i]);
+                fscanf(f_graph, "%lu", &activation_type[neuron_id][i]);
             }
 
             for (unsigned long int i = 0; i < bias_number[neuron_id]; i++)
             {
-                fscanf(f_logic, "%u", &bias_logic[neuron_id][i]);
+                fscanf(f_logic, "%lu", &bias_logic[neuron_id][i]);
                 if (bias_logic[neuron_id][i] == 0)
                 {
                     fscanf(f_fixwb, "%f", &fix_bias[neuron_id][i]);
@@ -1343,10 +1343,10 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
     printf("----------------\n");
     for (int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        printf("%u |", neighbour_number[neuron_id]);
+        printf("%lu |", neighbour_number[neuron_id]);
         for (unsigned long int i = 0; i < neighbour_number[neuron_id]; i++)
         {
-            printf(" %u %u ; ", graph_n[neuron_id][i], graph_i[neuron_id][i]);
+            printf(" %lu %lu ; ", graph_n[neuron_id][i], graph_i[neuron_id][i]);
         }
         printf("\n");
     }
@@ -1354,10 +1354,10 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
     printf("----------------\n");
     for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        printf("%u |", bias_number[neuron_id]);
+        printf("%lu |", bias_number[neuron_id]);
         for (unsigned long int i = 0; i < bias_number[neuron_id]; i++)
         {
-            printf(" %u ", activation_type[neuron_id][i]);
+            printf(" %lu ", activation_type[neuron_id][i]);
         }
         printf("\n");
     }
@@ -1365,10 +1365,10 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
     printf("-------------------\n");
     for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        printf("%u | ", neuron_id);
+        printf("%lu | ", neuron_id);
         for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
         {
-            printf("%u ", parent_number[neuron_id][j]);
+            printf("%lu ", parent_number[neuron_id][j]);
         }
         printf("\n");
     }
@@ -1377,7 +1377,7 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
     printf("------------\n");
     for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        printf("%u | ", neuron_id);
+        printf("%lu | ", neuron_id);
         for (unsigned long int j = 0; j < neighbour_number[neuron_id]; j++)
         {
             printf(" %f ", weight[neuron_id][j]);
@@ -1388,7 +1388,7 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
     printf("-----------\n");
     for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        printf("%u | ", neuron_id);
+        printf("%lu | ", neuron_id);
         for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
         {
             printf(" %f ", bias[neuron_id][j]);
@@ -1400,15 +1400,15 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
     printf("----------------\n");
     for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        printf("%u | %u \n", neuron_id + 1, dist[neuron_id]);
+        printf("%lu | %lu \n", neuron_id + 1, dist[neuron_id]);
     }
-    printf("Max distance: %u \n", dist_max);
+    printf("Max distance: %lu \n", dist_max);
     printf("\n");
     printf("How many neurons by distance:\n");
     printf("----------------\n");
     for (unsigned long int i = 0; i <= dist_max; i++)
     {
-        printf("%u | %3lu | ", i, dist_number[i]);
+        printf("%lu | %3lu | ", i, dist_number[i]);
         for (unsigned long int j = 0; j < dist_number[i]; j++)
         {
             printf("%3lu ", dist_indices[i][j] + 1);
@@ -1423,7 +1423,7 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
         printf("%3lu | %3lu |", neuron_id + 1, neighbour_number[neuron_id]);
         for (unsigned long int i = 0; i < neighbour_number[neuron_id]; i++)
         {
-            printf(" %u ", graph_logic[neuron_id][i]);
+            printf(" %lu ", graph_logic[neuron_id][i]);
         }
         printf("\n");
     }
@@ -1437,7 +1437,7 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
         {
             if (graph_logic[neuron_id][i] == 0)
             {
-                printf(" (%u): %5f ", graph_n[neuron_id][i] + 1, fix_weight[neuron_id][i]);
+                printf(" (%lu): %5f ", graph_n[neuron_id][i] + 1, fix_weight[neuron_id][i]);
             }
         }
         printf("\n");
@@ -1450,7 +1450,7 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
         printf("%3lu | %3lu |", neuron_id + 1, bias_number[neuron_id]);
         for (unsigned long int i = 0; i < bias_number[neuron_id]; i++)
         {
-            printf(" %u ", bias_logic[neuron_id][i]);
+            printf(" %lu ", bias_logic[neuron_id][i]);
         }
         printf("\n");
     }
@@ -1464,7 +1464,7 @@ void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_nu
         {
             if (bias_logic[neuron_id][i] == 0)
             {
-                printf(" (%u): %5f ", i + 1, fix_bias[neuron_id][i]);
+                printf(" (%lu): %5f ", i + 1, fix_bias[neuron_id][i]);
             }
         }
         printf("\n");
