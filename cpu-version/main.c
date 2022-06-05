@@ -726,7 +726,7 @@ int main()
 
         start_clock_one_step = omp_get_wtime();
 
-        float error_learn = error_temp_mean / learn_num;
+        float error_learn = error_temp_mean / mini_batch_num;
         float error_valid = 0.0;
 
         for (unsigned long int mini_batch_id = 0; mini_batch_id < mini_batch_num_valid; mini_batch_id++)
