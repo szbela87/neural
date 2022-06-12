@@ -2034,16 +2034,17 @@ unsigned long int calc_gradient_one_sample_ff(unsigned long int *neighbour_numbe
         for (unsigned long int dist_index = 0; dist_index < dist_number[layer_id]; dist_index++)
         {
             unsigned long int neuron_id = dist_indices[layer_id][dist_index];
-            for (unsigned long int bias_id = 0; bias_id < bias_number[neuron_id]; bias_id++)
-            {
+            float temp_value = 0.0;
                 for (unsigned long int neighbour_counter = 0; neighbour_counter < neighbour_number[neuron_id]; neighbour_counter++)
                 {
                     unsigned long int neighbour_ind_n = graph_n[neuron_id][neighbour_counter];
                     unsigned long int neighbour_ind_i = graph_i[neuron_id][neighbour_counter];
-                    weight_grad_inp[neuron_id][bias_id] += weight[neuron_id][neighbour_counter] *
-                                                           weight_grad_inp[neighbour_ind_n][neighbour_ind_i] *
-                                                           weight_grad_help[neuron_id][bias_id];
+                    temp_value += weight[neuron_id][neighbour_counter] *
+                                                           weight_grad_inp[neighbour_ind_n][neighbour_ind_i] ;
                 }
+            for (unsigned long int bias_id = 0; bias_id < bias_number[neuron_id]; bias_id++)
+            {
+                weight_grad_inp[neuron_id][bias_id] += temp_value *weight_grad_help[neuron_id][bias_id];
             }
         }
     }
