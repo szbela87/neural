@@ -762,7 +762,7 @@ int main()
 
         printf(" | ");
         print_progress_bar(10, iter_grad / (float)maxiter_grad);
-        printf(" %3lu [%lu/%lu] TE: %.5f: VE: %.5f ET: %.1fs ETA: %.1fs", iter_grad * 100 / maxiter_grad, iter_grad,
+        printf(" %3lu% [%lu/%lu] TE: %.5f: VE: %.5f ET: %.1fs ETA: %.1fs", iter_grad * 100 / maxiter_grad, iter_grad,
                maxiter_grad, error_learn, error_valid, elapsed_time, elapsed_time * maxiter_grad / iter_grad - elapsed_time + 0.01);
 
         if (numgrad > 0)

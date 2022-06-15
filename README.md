@@ -32,6 +32,8 @@ a short user manual for the program as well.
 * 16/02/22 BCE with logits.
 * 25/03/22 Memory management correctly for minibatches, predictions for datasets without labels, saving the weights of the optimizers.
 * 26/05/22 Important fixes related to integer types.
+* 31/05/22 CPU code for validating the GPU code
+* 15/06/22 GPU code
 
 **In progress**
 * 26/05/22 Most of the GPU kernels are ready (not published yet)
