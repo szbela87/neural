@@ -1,0 +1,45 @@
+seed                11
+thread_num          4
+tol_fixit           1.0e-6
+maxiter_grad        10
+maxiter_fix         10000
+initdx              1.0
+sfreq               1
+input_name          ./inputs/data/pulsar.csv
+output_name         ./outputs/results.dat 
+predict_name        ./outputs/predict.dat 
+acc_name            ./outputs/acc.dat 
+data_num            17898
+learn_num           14000
+mini_batch_size     100
+
+neuron_num          309
+input_num           8
+output_num          1
+graph_datas         ./inputs/configs/general_imp/graph_igru_I8_O1_H100.dat
+logic_datas         ./inputs/configs/general_imp/logic_igru_I8_O1_H100.dat
+fixwb_datas         ./inputs/configs/general_imp/fixwb_igru_I8_O1_H100.dat
+
+alpha               0.0
+
+lossfunction_type   bce_multilabeling
+
+optimizer           2
+grad_alpha          1.0e-1
+adam_alpha          1.0e-3
+adam_beta1          0.9
+adam_beta2          0.999
+adam_eps            1.0e-8
+
+ff_optimization     0
+
+chunker             0
+chunk_treshold      1.0e-1
+
+loaddatas           0
+load_backup         ./outputs/backup4.dat
+save_backup         ./outputs/backup4.dat
+zero_optim_param    1
+
+numgrad             0
+numgrad_eps         0.1
