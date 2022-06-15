@@ -16,7 +16,7 @@ a short user manual for the program as well.
 **My original aims were:**
 * to creating a program to simulate neural networks 
 * where the (hyper)graphs which represent the network are given by the user in a very flexible way.
-* get to know the C language.
+* get to know the C and Cuda C programming languages.
 
 **Log**
 * 11/07/21 Read in the inputs in Python from file and create the inputs for the C code.
