@@ -16,170 +16,168 @@
 #include <assert.h>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-
-// Block and thread per block
-#define BLOCK_SIZE_X 8
-#define BLOCK_SIZE_Y 8
-#define TPB 1024
+#include <omp.h>
 
 // Cuda kernels
 #include "kernels.cuh"
 
 /* Global variables */
-unsigned long int seed;
-unsigned long int thread_num;
+unsigned long long int seed;
+unsigned long long int thread_num;
 float tol_gradnorm;
 float tol_error_diff;
 float tol_fixit;
-unsigned long int maxiter_grad;
-unsigned long int maxiter_fix;
+unsigned long long int maxiter_grad;
+unsigned long long int maxiter_fix;
 float initdx;
-unsigned long int sfreq;
+unsigned long long int sfreq;
 char input_name[100];
 char output_name[100];
 char predict_name[100];
 char acc_name[100];
-unsigned long int data_num;
-unsigned long int learn_num;
-unsigned long int mini_batch_size;
-unsigned long int neuron_num;
-unsigned long int input_num;
-unsigned long int output_num;
+unsigned long long int data_num;
+unsigned long long int learn_num;
+unsigned long long int mini_batch_size;
+unsigned long long int neuron_num;
+unsigned long long int input_num;
+unsigned long long int output_num;
 char graph_datas[100];
 char logic_datas[100];
 char fixwb_datas[100];
 char lossfunction_type[100];
 float alpha;
-unsigned long int optimizer;
+unsigned long long int optimizer;
 float grad_alpha;
 float adam_alpha;
 float adam_beta1;
 float adam_beta2;
 float adam_eps;
-unsigned long int ff_optimization;
-unsigned long int chunker;
+unsigned long long int ff_optimization;
+unsigned long long int chunker;
 float chunk_treshold;
-unsigned long int loaddatas;
+unsigned long long int loaddatas;
 char load_backup[100];
 char save_backup[100];
-unsigned long int numgrad;
-unsigned long int zero_optim_param;
+unsigned long long int numgrad;
+unsigned long long int zero_optim_param;
 float numgrad_eps;
 float inf;
-unsigned long int all_neighbour_num;
-unsigned long int all_input_num;
-unsigned long int max_bias_num;
+unsigned long long int all_neighbour_num;
+unsigned long long int all_input_num;
+unsigned long long int max_bias_num;
 
 /* Prototypes */
 void read_parameters(char file_name[100]);
-void read_data(float *datas, unsigned long int line_number, FILE *f_data, unsigned long int test);
+void read_data(float *datas, unsigned long long int line_number, FILE *f_data, unsigned long long int test);
 void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb_file_name[100],
-                unsigned long int *neighbour_number, unsigned long int *bias_number, unsigned long int **activation_type, unsigned long int **graph_n, unsigned long int **graph_i,
-                unsigned long int **graph_logic, unsigned long int **bias_logic, unsigned long int **parent_number_m,
+                unsigned long long int *neighbour_number, unsigned long long int *bias_number, unsigned long long int **activation_type, unsigned long long int **graph_n, unsigned long long int **graph_i,
+                unsigned long long int **graph_logic, unsigned long long int **bias_logic, unsigned long long int **parent_number_m,
                 float **fix_weight, float **fix_bias,
-                unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias);
-unsigned long int rand_range_int(unsigned long int min, unsigned long int max);
+                unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias);
+unsigned long long int rand_range_int(unsigned long long int min, unsigned long long int max);
 float rand_range(float min, float max);
 
-float act_fun(float x, unsigned long int chooser);
-float act_fun_diff(float x, unsigned long int chooser);
+float act_fun(float x, unsigned long long int chooser);
+float act_fun_diff(float x, unsigned long long int chooser);
 
-unsigned long int imax(unsigned long int a, unsigned long int b);
+unsigned long long int imax(unsigned long long int a, unsigned long long int b);
 float dmax(float a, float b);
-float **allocate_dmatrix(unsigned long int row_num, unsigned long int *col_num);
-unsigned long int **allocate_imatrix(unsigned long int row_num, unsigned long int *col_num);
-void deallocate_dmatrix(float **m, unsigned long int row_num);
-void deallocate_imatrix(unsigned long int **m, unsigned long int row_num);
-void print_progress_bar(unsigned long int max_length, float rate);
-float calc_error(float *neuron_value, float *target_vector, unsigned long int mini_batch_len);
+float **allocate_dmatrix(unsigned long long int row_num, unsigned long long int *col_num);
+unsigned long long int **allocate_imatrix(unsigned long long int row_num, unsigned long long int *col_num);
+void deallocate_dmatrix(float **m, unsigned long long int row_num);
+void deallocate_imatrix(unsigned long long int **m, unsigned long long int row_num);
+void print_progress_bar(unsigned long long int max_length, float rate);
+float calc_error(float *neuron_value, float *target_vector, unsigned long long int mini_batch_len);
 
-void print_graph(unsigned long int *neighbour_number, unsigned long int *bias_number, unsigned long int *activation_type, unsigned long int *graph_n, unsigned long int *graph_i,
-                 unsigned long int *graph_logic, unsigned long int *bias_logic,
+void print_graph(unsigned long long int *neighbour_number, unsigned long long int *bias_number, unsigned long long int *activation_type, unsigned long long int *graph_n, unsigned long long int *graph_i,
+                 unsigned long long int *graph_logic, unsigned long long int *bias_logic,
                  float *fix_weight, float *fix_bias,
-                 unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias);
+                 unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias);
 
 void program_failure(char str[]);
 float random_normal(float mean, float std_dev);
-void softmax(float *input, unsigned long int input_len);
+void softmax(float *input, unsigned long long int input_len);
 
-void copy_dmatrix(float **input_matrix, unsigned long int row_num, unsigned long int *col_num, float *output_matrix);
-void copy_imatrix(unsigned long int **input_matrix, unsigned long int row_num, unsigned long int *col_num, unsigned long int *output_matrix);
+void copy_dmatrix(float **input_matrix, unsigned long long int row_num, unsigned long long int *col_num, float *output_matrix);
+void copy_imatrix(unsigned long long int **input_matrix, unsigned long long int row_num, unsigned long long int *col_num, unsigned long long int *output_matrix);
 
-void initialize_weights(unsigned long int *neighbour_number, unsigned long int *bias_number, unsigned long int **activation_type, unsigned long int **graph_n, unsigned long int **graph_i,
-                        unsigned long int **parent_number, float **weight, float **bias);
+void initialize_weights(unsigned long long int *neighbour_number, unsigned long long int *bias_number, unsigned long long int **activation_type, unsigned long long int **graph_n, unsigned long long int **graph_i,
+                        unsigned long long int **parent_number, float **weight, float **bias);
 
-float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
-                               unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                               unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                               unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                               unsigned long int *graph_p_ind_n_g,
+float calc_gradient_mini_batch(float *datas, unsigned long long int mini_batch_len,
+                               unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                               unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                               unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                               unsigned long long int *graph_p_ind_n_g,
                                float *weight_g, float *bias_g,
                                float *weight_grad_g, float *bias_grad_g,
                                float *iter_forward, float *iter_backward);
 
-float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
-                                  unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                                  unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                                  unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                                  unsigned long int *graph_p_ind_n_g,
+float calc_gradient_mini_batch_ff(float *datas, unsigned long long int mini_batch_len,
+                                  unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                                  unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                                  unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                                  unsigned long long int *graph_p_ind_n_g,
                                   float *weight_g, float *bias_g,
                                   float *weight_grad_g, float *bias_grad_g,
                                   float *iter_forward, float *iter_backward,
-                                  unsigned long int dist_max,
-                                  unsigned long int *dist_g, unsigned long int *dist,
-                                  unsigned long int *dist_input_g, unsigned long int *dist_input);
+                                  unsigned long long int dist_max,
+                                  unsigned long long int *dist_g, unsigned long long int *dist,
+                                  unsigned long long int *dist_input_g, unsigned long long int *dist_input);
 
-float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
-                              unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                              unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                              unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                              unsigned long int *graph_p_ind_n_g,
+float calc_network_mini_batch(float *datas, unsigned long long int mini_batch_len,
+                              unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                              unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                              unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                              unsigned long long int *graph_p_ind_n_g,
                               float *weight_trans_g, float *bias_g,
                               float *iter_forward);
 
-float calc_network_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
-                                 unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                                 unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                                 unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                                 unsigned long int *graph_p_ind_n_g,
+float calc_network_mini_batch_ff(float *datas, unsigned long long int mini_batch_len,
+                                 unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                                 unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                                 unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                                 unsigned long long int *graph_p_ind_n_g,
                                  float *weight_trans_g, float *bias_g,
                                  float *iter_forward,
-                                 unsigned long int dist_max,
-                                 unsigned long int *dist_g, unsigned long int *dist,
-                                 unsigned long int *dist_input_g, unsigned long int *dist_input);
+                                 unsigned long long int dist_max,
+                                 unsigned long long int *dist_g, unsigned long long int *dist,
+                                 unsigned long long int *dist_input_g, unsigned long long int *dist_input);
 
-void make_predictions(float *datas, unsigned long int mini_batch_len,
-                      unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                      unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                      unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                      unsigned long int *graph_p_ind_n_g,
+void make_predictions(float *datas, unsigned long long int mini_batch_len,
+                      unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                      unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                      unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                      unsigned long long int *graph_p_ind_n_g,
                       float *weight_trans_g, float *bias_g,
                       float **predictions_mini_batch);
 
-void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
-                         unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                         unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                         unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                         unsigned long int *graph_p_ind_n_g,
+void make_predictions_ff(float *datas, unsigned long long int mini_batch_len,
+                         unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                         unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                         unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                         unsigned long long int *graph_p_ind_n_g,
                          float *weight_trans_g, float *bias_g,
-                         unsigned long int dist_max,
-                         unsigned long int *dist_g, unsigned long int *dist,
-                         unsigned long int *dist_input_g, unsigned long int *dist_input,
+                         unsigned long long int dist_max,
+                         unsigned long long int *dist_g, unsigned long long int *dist,
+                         unsigned long long int *dist_input_g, unsigned long long int *dist_input,
                          float **predictions_mini_batch);
 
 void save_weight_bias(char filename[100], float *weight, float *bias,
-                      unsigned long int neuron_num, unsigned long int *neighbour_number, unsigned long int *bias_number,
+                      unsigned long long int neuron_num, unsigned long long int *neighbour_number, unsigned long long int *bias_number,
                       float *mt_weight, float *mth_weight, float *vt_weight, float *vth_weight, float *ut_weight,
                       float *mt_bias, float *mth_bias, float *vt_bias, float *vth_bias, float *ut_bias,
                       float adam_beta1t, float adam_beta2t,
-                      unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias);
+                      unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias);
 
 void load_weight_bias(char filename[100], float *weight, float *bias,
-                      unsigned long int neuron_num, unsigned long int *neighbour_number, unsigned long int *bias_number,
+                      unsigned long long int neuron_num, unsigned long long int *neighbour_number, unsigned long long int *bias_number,
                       float *mt_weight, float *mth_weight, float *vt_weight, float *vth_weight, float *ut_weight,
                       float *mt_bias, float *mth_bias, float *vt_bias, float *vth_bias, float *ut_bias,
                       float adam_beta1t, float adam_beta2t,
-                      unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias);
+                      unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias);
+float calc_vector_norm(float *v1, int row_nums);
+float calc_diff_vectors(float *v1, float *v2, int row_nums);
 
 int main()
 {
@@ -190,6 +188,9 @@ int main()
 
     // Read input parameters
     read_parameters("./inputs/simulparams.dat");
+
+    // Set number of threads
+    omp_set_num_threads(thread_num);
 
     // Set random seed
     if (seed == 0)
@@ -224,18 +225,18 @@ int main()
 
     predictions_mini_batch = (float **)malloc(mini_batch_size * sizeof(float *));
 
-    for (unsigned long int i = 0; i < mini_batch_size; i++)
+    for (unsigned long long int i = 0; i < mini_batch_size; i++)
     {
         predictions_mini_batch[i] = (float *)malloc(output_num * sizeof(float));
     }
 
     // Minibatch allocations
-    unsigned long int mini_batch_num = learn_num / mini_batch_size;
+    unsigned long long int mini_batch_num = learn_num / mini_batch_size;
     if (mini_batch_size * mini_batch_num != learn_num)
     {
         mini_batch_num++;
     }
-    unsigned long int mini_batch_num_valid = (data_num - learn_num) / mini_batch_size;
+    unsigned long long int mini_batch_num_valid = (data_num - learn_num) / mini_batch_size;
     if (mini_batch_size * mini_batch_num_valid != data_num - learn_num)
     {
         mini_batch_num_valid++;
@@ -243,39 +244,39 @@ int main()
     float *datas_mini_batch = (float *)malloc(mini_batch_size * (input_num + output_num) * sizeof(float));
 
     // Allocations for the graph
-    unsigned long int *neighbour_number = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int));
-    unsigned long int *bias_number = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int));
-    unsigned long int *first_ind_neighbour = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int));
-    unsigned long int *first_ind_bias = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int));
+    unsigned long long int *neighbour_number = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int));
+    unsigned long long int *bias_number = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int));
+    unsigned long long int *first_ind_neighbour = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int));
+    unsigned long long int *first_ind_bias = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int));
 
-    for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+    for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
         first_ind_neighbour[neuron_id] = 0;
         first_ind_bias[neuron_id] = 0;
     }
 
-    unsigned long int **activation_type_m = (unsigned long int **)malloc(neuron_num * sizeof(unsigned long int *));
-    unsigned long int **graph_n_m = (unsigned long int **)malloc(neuron_num * sizeof(unsigned long int *));
-    unsigned long int **graph_i_m = (unsigned long int **)malloc(neuron_num * sizeof(unsigned long int *));
-    unsigned long int **graph_logic_m = (unsigned long int **)malloc(neuron_num * sizeof(unsigned long int *));
-    unsigned long int **bias_logic_m = (unsigned long int **)malloc(neuron_num * sizeof(unsigned long int *));
+    unsigned long long int **activation_type_m = (unsigned long long int **)malloc(neuron_num * sizeof(unsigned long long int *));
+    unsigned long long int **graph_n_m = (unsigned long long int **)malloc(neuron_num * sizeof(unsigned long long int *));
+    unsigned long long int **graph_i_m = (unsigned long long int **)malloc(neuron_num * sizeof(unsigned long long int *));
+    unsigned long long int **graph_logic_m = (unsigned long long int **)malloc(neuron_num * sizeof(unsigned long long int *));
+    unsigned long long int **bias_logic_m = (unsigned long long int **)malloc(neuron_num * sizeof(unsigned long long int *));
     float **fix_weight_m = (float **)malloc(neuron_num * sizeof(float *));
     float **fix_bias_m = (float **)malloc(neuron_num * sizeof(float *));
-    unsigned long int **parent_number_m = (unsigned long int **)malloc(neuron_num * sizeof(unsigned long int *));
+    unsigned long long int **parent_number_m = (unsigned long long int **)malloc(neuron_num * sizeof(unsigned long long int *));
 
     read_graph(graph_datas, logic_datas, fixwb_datas, neighbour_number, bias_number,
                activation_type_m, graph_n_m, graph_i_m, graph_logic_m, bias_logic_m, parent_number_m,
                fix_weight_m, fix_bias_m,
                first_ind_neighbour, first_ind_bias);
 
-    unsigned long int *first_ind_parent = (unsigned long int *)calloc(all_input_num, sizeof(unsigned long int));
-    unsigned long int parent_number_old = 0;
-    unsigned long int ind = 0;
+    unsigned long long int *first_ind_parent = (unsigned long long int *)calloc(all_input_num, sizeof(unsigned long long int));
+    unsigned long long int parent_number_old = 0;
+    unsigned long long int ind = 0;
 
     // first parent indices in all_input_num sized vectors
-    for (unsigned long int i = 0; i < neuron_num; i++)
+    for (unsigned long long int i = 0; i < neuron_num; i++)
     {
-        for (unsigned long int j = 0; j < bias_number[i]; j++)
+        for (unsigned long long int j = 0; j < bias_number[i]; j++)
         {
             if (ind > 0)
             {
@@ -287,7 +288,7 @@ int main()
     }
 
     max_bias_num = 0;
-    for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+    for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
         if (bias_number[neuron_id] > max_bias_num)
         {
@@ -295,14 +296,14 @@ int main()
         }
     }
 
-    unsigned long int *activation_type = (unsigned long int *)malloc(all_input_num * sizeof(unsigned long int));
-    unsigned long int *graph_n = (unsigned long int *)malloc(all_neighbour_num * sizeof(unsigned long int));
-    unsigned long int *graph_i = (unsigned long int *)malloc(all_neighbour_num * sizeof(unsigned long int));
-    unsigned long int *graph_logic = (unsigned long int *)malloc(all_neighbour_num * sizeof(unsigned long int));
-    unsigned long int *bias_logic = (unsigned long int *)malloc(all_input_num * sizeof(unsigned long int));
+    unsigned long long int *activation_type = (unsigned long long int *)malloc(all_input_num * sizeof(unsigned long long int));
+    unsigned long long int *graph_n = (unsigned long long int *)malloc(all_neighbour_num * sizeof(unsigned long long int));
+    unsigned long long int *graph_i = (unsigned long long int *)malloc(all_neighbour_num * sizeof(unsigned long long int));
+    unsigned long long int *graph_logic = (unsigned long long int *)malloc(all_neighbour_num * sizeof(unsigned long long int));
+    unsigned long long int *bias_logic = (unsigned long long int *)malloc(all_input_num * sizeof(unsigned long long int));
     float *fix_weight = (float *)malloc(all_neighbour_num * sizeof(float));
     float *fix_bias = (float *)malloc(all_input_num * sizeof(float));
-    unsigned long int *parent_number = (unsigned long int *)malloc(all_input_num * sizeof(unsigned long int));
+    unsigned long long int *parent_number = (unsigned long long int *)malloc(all_input_num * sizeof(unsigned long long int));
 
     // Flattening
     copy_imatrix(activation_type_m, neuron_num, bias_number, activation_type);
@@ -317,31 +318,31 @@ int main()
     // Copying parent_number_m to parent_number??
 
     // Creating the reversed graph, the second array is for the neighbor indices (the order, not the index)
-    unsigned long int **graph_p_m = (unsigned long int **)malloc(all_input_num * sizeof(unsigned long int *));
-    unsigned long int **graph_p_ind_n_m = (unsigned long int **)malloc(all_input_num * sizeof(unsigned long int *));
+    unsigned long long int **graph_p_m = (unsigned long long int **)malloc(all_input_num * sizeof(unsigned long long int *));
+    unsigned long long int **graph_p_ind_n_m = (unsigned long long int **)malloc(all_input_num * sizeof(unsigned long long int *));
     // Allocating it
-    for (unsigned long int i = 0; i < all_input_num; i++)
+    for (unsigned long long int i = 0; i < all_input_num; i++)
     {
-        graph_p_m[i] = (unsigned long int *)malloc(parent_number[i] * sizeof(unsigned long int));
-        graph_p_ind_n_m[i] = (unsigned long int *)malloc(parent_number[i] * sizeof(unsigned long int));
+        graph_p_m[i] = (unsigned long long int *)malloc(parent_number[i] * sizeof(unsigned long long int));
+        graph_p_ind_n_m[i] = (unsigned long long int *)malloc(parent_number[i] * sizeof(unsigned long long int));
     }
     // Upload it
-    unsigned long int *graph_p_m_counter = (unsigned long int *)calloc(all_input_num, sizeof(unsigned long int));
-    for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+    unsigned long long int *graph_p_m_counter = (unsigned long long int *)calloc(all_input_num, sizeof(unsigned long long int));
+    for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
     {
-        for (unsigned long int neighbour_counter = 0; neighbour_counter < neighbour_number[neuron_id]; neighbour_counter++)
+        for (unsigned long long int neighbour_counter = 0; neighbour_counter < neighbour_number[neuron_id]; neighbour_counter++)
         {
-            unsigned long int neighbour_ind = graph_n_m[neuron_id][neighbour_counter];
-            unsigned long int bias_ind = graph_i_m[neuron_id][neighbour_counter];
-            unsigned long int input_ind = first_ind_bias[neighbour_ind] + bias_ind;
+            unsigned long long int neighbour_ind = graph_n_m[neuron_id][neighbour_counter];
+            unsigned long long int bias_ind = graph_i_m[neuron_id][neighbour_counter];
+            unsigned long long int input_ind = first_ind_bias[neighbour_ind] + bias_ind;
             graph_p_m[input_ind][graph_p_m_counter[input_ind]] = neuron_id; // we need a counter here
             graph_p_ind_n_m[input_ind][graph_p_m_counter[input_ind]] = neighbour_counter;
             graph_p_m_counter[input_ind]++;
         }
     }
 
-    unsigned long int *graph_p = (unsigned long int *)malloc(all_neighbour_num * sizeof(unsigned long int));
-    unsigned long int *graph_p_ind_n = (unsigned long int *)malloc(all_neighbour_num * sizeof(unsigned long int));
+    unsigned long long int *graph_p = (unsigned long long int *)malloc(all_neighbour_num * sizeof(unsigned long long int));
+    unsigned long long int *graph_p_ind_n = (unsigned long long int *)malloc(all_neighbour_num * sizeof(unsigned long long int));
     // Flattening it
     copy_imatrix(graph_p_m, all_input_num, parent_number, graph_p);
     copy_imatrix(graph_p_ind_n_m, all_input_num, parent_number, graph_p_ind_n);
@@ -370,14 +371,14 @@ int main()
     float *bias_grad = (float *)calloc(all_input_num, sizeof(float));
 
     // Setting the fix weights and biases
-    for (unsigned long int ind = 0; ind < all_neighbour_num; ind++)
+    for (unsigned long long int ind = 0; ind < all_neighbour_num; ind++)
     {
         if (graph_logic[ind] == 0)
         {
             weight[ind] = fix_weight[ind];
         }
     }
-    for (unsigned long int ind = 0; ind < all_input_num; ind++)
+    for (unsigned long long int ind = 0; ind < all_input_num; ind++)
     {
         if (bias_logic[ind] == 0)
         {
@@ -396,10 +397,10 @@ int main()
                          adam_beta1t, adam_beta2t, first_ind_neighbour, first_ind_bias);
 
         // Setting the fix weights and biases
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_neighbour[neuron_id];
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            unsigned long long int startind = first_ind_neighbour[neuron_id];
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
 
                 if (graph_logic[startind + neighbour_ind] == 0)
@@ -409,10 +410,10 @@ int main()
             }
         }
 
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_bias[neuron_id];
-            for (unsigned long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
+            unsigned long long int startind = first_ind_bias[neuron_id];
+            for (unsigned long long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
             {
 
                 if (bias_logic[startind + bias_ind] == 0)
@@ -425,10 +426,10 @@ int main()
 
     if (zero_optim_param == 1)
     {
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_neighbour[neuron_id];
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            unsigned long long int startind = first_ind_neighbour[neuron_id];
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
                 mt_weight[startind + neighbour_ind] = 0.0;
                 mth_weight[startind + neighbour_ind] = 0.0;
@@ -438,7 +439,7 @@ int main()
             }
 
             startind = first_ind_bias[neuron_id];
-            for (unsigned long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
+            for (unsigned long long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
             {
                 mt_bias[startind + bias_ind] = 0.0;
                 mth_bias[startind + bias_ind] = 0.0;
@@ -470,10 +471,10 @@ int main()
     if (strcmp(lossfunction_type, "bce_multilabeling") == 0)
     {
         // Checking that the output activations are identity, and all outputs have just one input.
-        unsigned long int output_logic = 0;
-        for (unsigned long int i = 0; i < output_num; i++)
+        unsigned long long int output_logic = 0;
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
-            unsigned long int neuron_id = neuron_num - output_num + i;
+            unsigned long long int neuron_id = neuron_num - output_num + i;
             if (bias_number[neuron_id] != 1)
             {
                 output_logic += 1;
@@ -500,32 +501,32 @@ int main()
     //                         //
     //+++++++++++++++++++++++++//
 
-    unsigned long int check_cycle = 0;
-    unsigned long int *dist = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int));          // neuron distances for PERT method
-    unsigned long int *dist_input = (unsigned long int *)malloc(all_input_num * sizeof(unsigned long int)); // input distances for PERT method
-    unsigned long int *dist_extra = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int));    // neuron distances for PERT method
-    unsigned long int dist_max;
+    unsigned long long int check_cycle = 0;
+    unsigned long long int *dist = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int));          // neuron distances for PERT method
+    unsigned long long int *dist_input = (unsigned long long int *)malloc(all_input_num * sizeof(unsigned long long int)); // input distances for PERT method
+    unsigned long long int *dist_extra = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int));    // neuron distances for PERT method
+    unsigned long long int dist_max;
     if (ff_optimization > 0)
     {
 
         // Calculate the distances for PERT method
-        for (unsigned long int i = 0; i < neuron_num; i++)
+        for (unsigned long long int i = 0; i < neuron_num; i++)
         {
             dist[i] = 0;
         }
 
-        for (unsigned long int i = 0; i < neuron_num; i++)
+        for (unsigned long long int i = 0; i < neuron_num; i++)
         {
-            for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+            for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
             {
-                for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+                for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
                 {
                     dist[graph_n_m[neuron_id][neighbour_ind]] = imax(dist[graph_n_m[neuron_id][neighbour_ind]], dist[neuron_id] + 1);
                 }
             }
         }
         dist_max = 0;
-        for (unsigned long int i = 0; i < neuron_num; i++)
+        for (unsigned long long int i = 0; i < neuron_num; i++)
         {
             if (dist[i] > dist_max)
             {
@@ -533,20 +534,20 @@ int main()
             }
         }
 
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
             dist_extra[neuron_id] = dist[neuron_id];
         }
         // Make one extra step to check whether is a cycle in the graph
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
                 dist_extra[graph_n_m[neuron_id][neighbour_ind]] = imax(dist[graph_n_m[neuron_id][neighbour_ind]], dist[neuron_id] + 1);
             }
         }
 
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
             if (dist[neuron_id] != dist_extra[neuron_id])
             {
@@ -560,22 +561,22 @@ int main()
         program_failure("Logical error: cycle in the graph\n");
     }
 
-    unsigned long int *dist_number;            // count the neurons by distance
-    unsigned long int *dist_number_temp;       // temporal vector to count the neurons by distance
-    unsigned long int **dist_indices_m;        // neuron indices by distances
-    unsigned long int *dist_indices;           // the same in one vector
-    unsigned long int *first_ind_dist_indices; // pointer to the first elements in dist_indices
+    unsigned long long int *dist_number;            // count the neurons by distance
+    unsigned long long int *dist_number_temp;       // temporal vector to count the neurons by distance
+    unsigned long long int **dist_indices_m;        // neuron indices by distances
+    unsigned long long int *dist_indices;           // the same in one vector
+    unsigned long long int *first_ind_dist_indices; // pointer to the first elements in dist_indices
 
     // Count the neurons by distance values
     if ((ff_optimization > 0) && (check_cycle == 0))
     {
-        dist_number = (unsigned long int *)malloc((dist_max + 1) * sizeof(unsigned long int));
+        dist_number = (unsigned long long int *)malloc((dist_max + 1) * sizeof(unsigned long long int));
 
-        for (unsigned long int i = 0; i <= dist_max; i++)
+        for (unsigned long long int i = 0; i <= dist_max; i++)
         {
             dist_number[i] = 0;
         }
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
             dist_number[dist[neuron_id]]++;
         }
@@ -583,12 +584,12 @@ int main()
         dist_indices_m = allocate_imatrix(dist_max + 1, dist_number);
 
         // Create the list of the neuron indices by distance
-        dist_number_temp = (unsigned long int *)malloc((dist_max + 1) * sizeof(unsigned long int));
+        dist_number_temp = (unsigned long long int *)malloc((dist_max + 1) * sizeof(unsigned long long int));
 
         // Check whether is there any distance with 0 neuron
-        unsigned long int dist_min = dist_max;
+        unsigned long long int dist_min = dist_max;
 
-        for (unsigned long int i = 0; i < neuron_num; i++)
+        for (unsigned long long int i = 0; i < neuron_num; i++)
         {
             if (dist_number[i] < dist_min)
             {
@@ -596,29 +597,29 @@ int main()
             }
         }
 
-        for (unsigned long int i = 0; i <= dist_max; i++)
+        for (unsigned long long int i = 0; i <= dist_max; i++)
         {
             dist_number_temp[i] = 0;
         }
 
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
             dist_indices_m[dist[neuron_id]][dist_number_temp[dist[neuron_id]]] = neuron_id;
             dist_number_temp[dist[neuron_id]]++;
         }
 
-        dist_indices = (unsigned long int *)malloc(neuron_num * sizeof(unsigned long int)); // Ez nem jo itt!!! ???
-        first_ind_dist_indices = (unsigned long int *)malloc((dist_max + 1) * sizeof(unsigned long int));
-        for (unsigned long int i = 0; i <= dist_max; i++)
+        dist_indices = (unsigned long long int *)malloc(neuron_num * sizeof(unsigned long long int)); // Ez nem jo itt!!! ???
+        first_ind_dist_indices = (unsigned long long int *)malloc((dist_max + 1) * sizeof(unsigned long long int));
+        for (unsigned long long int i = 0; i <= dist_max; i++)
         {
             first_ind_dist_indices[i] = 0;
         }
 
         // copying dist_indices_m ---> dist_indices, first_ind_dist_indices
-        unsigned long int copy_ind = 0;
-        for (unsigned long int i = 0; i <= dist_max; i++)
+        unsigned long long int copy_ind = 0;
+        for (unsigned long long int i = 0; i <= dist_max; i++)
         {
-            for (unsigned long int j = 0; j < dist_number[i]; j++)
+            for (unsigned long long int j = 0; j < dist_number[i]; j++)
             {
                 dist_indices[copy_ind] = dist_indices_m[i][j];
                 copy_ind++;
@@ -630,15 +631,15 @@ int main()
         }
 
         // Creating distance values for the inputs
-        for (unsigned long int i = 0; i < all_input_num; i++)
+        for (unsigned long long int i = 0; i < all_input_num; i++)
         {
             dist_input[i] = 0;
         }
 
-        unsigned long int counter = 0;
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        unsigned long long int counter = 0;
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            for (unsigned long int bias_id = 0; bias_id < bias_number[neuron_id]; bias_id++)
+            for (unsigned long long int bias_id = 0; bias_id < bias_number[neuron_id]; bias_id++)
             {
                 dist_input[counter] = dist[neuron_id];
                 counter++;
@@ -652,7 +653,7 @@ int main()
     //                         //
     //+++++++++++++++++++++++++//
 
-    unsigned long int iter_grad = 0;
+    unsigned long long int iter_grad = 0;
 
     float elapsed_time = 0.0;
     FILE *f = fopen(output_name, "a");
@@ -696,7 +697,7 @@ int main()
     //                                              //
     //++++++++++++++++++++++++++++++++++++++++++++++//
 
-    unsigned long int *neighbour_number_g, *bias_number_g, *parent_number_g,
+    unsigned long long int *neighbour_number_g, *bias_number_g, *parent_number_g,
         *first_ind_neighbour_g, *first_ind_bias_g, *first_ind_parent_g,
         *activation_type_g, *graph_p_ind_n_g,
         *graph_n_g, *graph_i_g, *graph_p_g,
@@ -712,22 +713,22 @@ int main()
 
     cudaMalloc((void **)&weight_trans_g, sizeof(float) * all_neighbour_num);
 
-    cudaMalloc((void **)&neighbour_number_g, sizeof(unsigned long int) * neuron_num);
-    cudaMalloc((void **)&bias_number_g, sizeof(unsigned long int) * neuron_num);
-    cudaMalloc((void **)&parent_number_g, sizeof(unsigned long int) * all_input_num);
-    cudaMalloc((void **)&first_ind_neighbour_g, sizeof(unsigned long int) * neuron_num);
-    cudaMalloc((void **)&first_ind_bias_g, sizeof(unsigned long int) * neuron_num);
-    cudaMalloc((void **)&first_ind_parent_g, sizeof(unsigned long int) * all_input_num);
-    cudaMalloc((void **)&activation_type_g, sizeof(unsigned long int) * all_input_num);
-    cudaMalloc((void **)&graph_n_g, sizeof(unsigned long int) * all_neighbour_num);
-    cudaMalloc((void **)&graph_i_g, sizeof(unsigned long int) * all_neighbour_num);
-    cudaMalloc((void **)&graph_p_g, sizeof(unsigned long int) * all_neighbour_num);
-    cudaMalloc((void **)&graph_p_ind_n_g, sizeof(unsigned long int) * all_neighbour_num);
-    cudaMalloc((void **)&graph_logic_g, sizeof(unsigned long int) * all_neighbour_num);
-    cudaMalloc((void **)&bias_logic_g, sizeof(unsigned long int) * all_input_num);
+    cudaMalloc((void **)&neighbour_number_g, sizeof(unsigned long long int) * neuron_num);
+    cudaMalloc((void **)&bias_number_g, sizeof(unsigned long long int) * neuron_num);
+    cudaMalloc((void **)&parent_number_g, sizeof(unsigned long long int) * all_input_num);
+    cudaMalloc((void **)&first_ind_neighbour_g, sizeof(unsigned long long int) * neuron_num);
+    cudaMalloc((void **)&first_ind_bias_g, sizeof(unsigned long long int) * neuron_num);
+    cudaMalloc((void **)&first_ind_parent_g, sizeof(unsigned long long int) * all_input_num);
+    cudaMalloc((void **)&activation_type_g, sizeof(unsigned long long int) * all_input_num);
+    cudaMalloc((void **)&graph_n_g, sizeof(unsigned long long int) * all_neighbour_num);
+    cudaMalloc((void **)&graph_i_g, sizeof(unsigned long long int) * all_neighbour_num);
+    cudaMalloc((void **)&graph_p_g, sizeof(unsigned long long int) * all_neighbour_num);
+    cudaMalloc((void **)&graph_p_ind_n_g, sizeof(unsigned long long int) * all_neighbour_num);
+    cudaMalloc((void **)&graph_logic_g, sizeof(unsigned long long int) * all_neighbour_num);
+    cudaMalloc((void **)&bias_logic_g, sizeof(unsigned long long int) * all_input_num);
 
-    cudaMalloc((void **)&dist_g, sizeof(unsigned long int) * neuron_num);
-    cudaMalloc((void **)&dist_input_g, sizeof(unsigned long int) * all_input_num);
+    cudaMalloc((void **)&dist_g, sizeof(unsigned long long int) * neuron_num);
+    cudaMalloc((void **)&dist_input_g, sizeof(unsigned long long int) * all_input_num);
 
     cudaMalloc((void **)&weight_g, sizeof(float) * all_neighbour_num);
     cudaMalloc((void **)&bias_g, sizeof(float) * all_input_num);
@@ -744,21 +745,21 @@ int main()
     cudaMalloc((void **)&vth_weight_g, sizeof(float) * all_neighbour_num);
     cudaMalloc((void **)&vth_bias_g, sizeof(float) * all_input_num);
 
-    cudaMemcpy(first_ind_neighbour_g, first_ind_neighbour, sizeof(unsigned long int) * neuron_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(first_ind_bias_g, first_ind_bias, sizeof(unsigned long int) * neuron_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(first_ind_parent_g, first_ind_parent, sizeof(unsigned long int) * all_input_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(neighbour_number_g, neighbour_number, sizeof(unsigned long int) * neuron_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(bias_number_g, bias_number, sizeof(unsigned long int) * neuron_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(parent_number_g, parent_number, sizeof(unsigned long int) * all_input_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(graph_p_g, graph_p, sizeof(unsigned long int) * all_neighbour_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(graph_p_ind_n_g, graph_p_ind_n, sizeof(unsigned long int) * all_neighbour_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(activation_type_g, activation_type, sizeof(unsigned long int) * all_input_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(graph_n_g, graph_n, sizeof(unsigned long int) * all_neighbour_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(graph_i_g, graph_i, sizeof(unsigned long int) * all_neighbour_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(graph_logic_g, graph_logic, sizeof(unsigned long int) * all_neighbour_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(bias_logic_g, bias_logic, sizeof(unsigned long int) * all_input_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(dist_g, dist, sizeof(unsigned long int) * neuron_num, cudaMemcpyHostToDevice);
-    cudaMemcpy(dist_input_g, dist_input, sizeof(unsigned long int) * all_input_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(first_ind_neighbour_g, first_ind_neighbour, sizeof(unsigned long long int) * neuron_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(first_ind_bias_g, first_ind_bias, sizeof(unsigned long long int) * neuron_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(first_ind_parent_g, first_ind_parent, sizeof(unsigned long long int) * all_input_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(neighbour_number_g, neighbour_number, sizeof(unsigned long long int) * neuron_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(bias_number_g, bias_number, sizeof(unsigned long long int) * neuron_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(parent_number_g, parent_number, sizeof(unsigned long long int) * all_input_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(graph_p_g, graph_p, sizeof(unsigned long long int) * all_neighbour_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(graph_p_ind_n_g, graph_p_ind_n, sizeof(unsigned long long int) * all_neighbour_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(activation_type_g, activation_type, sizeof(unsigned long long int) * all_input_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(graph_n_g, graph_n, sizeof(unsigned long long int) * all_neighbour_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(graph_i_g, graph_i, sizeof(unsigned long long int) * all_neighbour_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(graph_logic_g, graph_logic, sizeof(unsigned long long int) * all_neighbour_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(bias_logic_g, bias_logic, sizeof(unsigned long long int) * all_input_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(dist_g, dist, sizeof(unsigned long long int) * neuron_num, cudaMemcpyHostToDevice);
+    cudaMemcpy(dist_input_g, dist_input, sizeof(unsigned long long int) * all_input_num, cudaMemcpyHostToDevice);
 
     cudaMemcpy(weight_g, weight, sizeof(float) * all_neighbour_num, cudaMemcpyHostToDevice);
     cudaMemcpy(bias_g, bias, sizeof(float) * all_input_num, cudaMemcpyHostToDevice);
@@ -804,12 +805,12 @@ int main()
         //                         //
         //+++++++++++++++++++++++++//
 
-        for (unsigned long int mini_batch_id = 0; mini_batch_id < mini_batch_num; mini_batch_id++)
+        for (unsigned long long int mini_batch_id = 0; mini_batch_id < mini_batch_num; mini_batch_id++)
         {
             // Read a mini-batch from file
-            unsigned long int mini_batch_len;
-            unsigned long int mini_batch_si = mini_batch_id * mini_batch_size;
-            unsigned long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1;
+            unsigned long long int mini_batch_len;
+            unsigned long long int mini_batch_si = mini_batch_id * mini_batch_size;
+            unsigned long long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1;
             if (mini_batch_ei > learn_num - 1)
             {
                 mini_batch_ei = learn_num - 1;
@@ -872,7 +873,7 @@ int main()
 
             // Display the results
 
-            for (unsigned long int i = 0; i < 10; i++)
+            for (unsigned long long int i = 0; i < 10; i++)
             {
                 printf("\b \b");
             }
@@ -881,14 +882,14 @@ int main()
             if (mini_batch_id < mini_batch_num - 1)
             {
                 print_progress_bar(10, (mini_batch_id + 1) / (float)mini_batch_num);
-                printf(" [%lu/%lu] TE: %.5f ET: %.1fs ETA: %.1fs", mini_batch_id + 1,
+                printf(" [%llu/%llu] TE: %.5f ET: %.1fs ETA: %.1fs", mini_batch_id + 1,
                        mini_batch_num, error_temp,
                        elapsed_time_temp, elapsed_time_temp * mini_batch_num / (mini_batch_id + 1) - elapsed_time_temp + 0.01);
             }
             else
             {
                 print_progress_bar(10, (mini_batch_id + 1) / (float)mini_batch_num);
-                printf(" [%lu/%lu] TE: %.5f ET: %.1fs", mini_batch_id + 1,
+                printf(" [%llu/%llu] TE: %.5f ET: %.1fs", mini_batch_id + 1,
                        mini_batch_num, error_temp,
                        elapsed_time_temp);
             }
@@ -911,12 +912,12 @@ int main()
         // Transposing the weight matrix
         weight_transpose_gpu<<<(neuron_num + TPB - 1) / TPB, TPB>>>(first_ind_neighbour_g, first_ind_bias_g, first_ind_parent_g,
                                                                     neighbour_number_g, bias_number_g, parent_number_g, graph_p_g, graph_p_ind_n_g, weight_g, weight_trans_g, neuron_num);
-        for (unsigned long int mini_batch_id = 0; mini_batch_id < mini_batch_num_valid; mini_batch_id++)
+        for (unsigned long long int mini_batch_id = 0; mini_batch_id < mini_batch_num_valid; mini_batch_id++)
         {
-            unsigned long int mini_batch_len;
+            unsigned long long int mini_batch_len;
 
-            unsigned long int mini_batch_si = mini_batch_id * mini_batch_size + learn_num;
-            unsigned long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1 + learn_num;
+            unsigned long long int mini_batch_si = mini_batch_id * mini_batch_size + learn_num;
+            unsigned long long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1 + learn_num;
             if (mini_batch_ei > data_num - 1)
             {
                 mini_batch_ei = data_num - 1;
@@ -961,7 +962,7 @@ int main()
 
         printf(" | ");
         print_progress_bar(10, iter_grad / (float)maxiter_grad);
-        printf(" %3lu% [%lu/%lu] TE: %.5f: VE: %.5f ET: %.1fs ETA: %.1fs", iter_grad * 100 / maxiter_grad, iter_grad,
+        printf(" %3llu% [%llu/%llu] TE: %.5f: VE: %.5f ET: %.1fs ETA: %.1fs", iter_grad * 100 / maxiter_grad, iter_grad,
                maxiter_grad, error_learn, error_valid, elapsed_time, elapsed_time * maxiter_grad / iter_grad - elapsed_time + 0.01);
         printf("\n");
 
@@ -994,12 +995,12 @@ int main()
 
                 // Training set
                 FILE *f_data = fopen(input_name, "r");
-                for (unsigned long int mini_batch_id = 0; mini_batch_id < mini_batch_num; mini_batch_id++)
+                for (unsigned long long int mini_batch_id = 0; mini_batch_id < mini_batch_num; mini_batch_id++)
                 {
-                    unsigned long int mini_batch_len;
+                    unsigned long long int mini_batch_len;
 
-                    unsigned long int mini_batch_si = mini_batch_id * mini_batch_size;
-                    unsigned long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1;
+                    unsigned long long int mini_batch_si = mini_batch_id * mini_batch_size;
+                    unsigned long long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1;
                     if (mini_batch_ei > learn_num - 1)
                     {
                         mini_batch_ei = learn_num - 1;
@@ -1028,9 +1029,9 @@ int main()
                                             predictions_mini_batch);
                     }
 
-                    for (unsigned long int i = 0; i < mini_batch_len; i++)
+                    for (unsigned long long int i = 0; i < mini_batch_len; i++)
                     {
-                        for (unsigned long int j = 0; j < output_num; j++)
+                        for (unsigned long long int j = 0; j < output_num; j++)
                         {
                             fprintf(f, "%f ", predictions_mini_batch[i][j]);
                         }
@@ -1040,11 +1041,11 @@ int main()
                     if ((strcmp(lossfunction_type, "bce_multilabeling") == 0) || (strcmp(lossfunction_type, "multilabeling_crossentropy") == 0))
                     {
 
-                        for (unsigned long int i = 0; i < mini_batch_len; i++)
+                        for (unsigned long long int i = 0; i < mini_batch_len; i++)
                         {
-                            for (unsigned long int j = 0; j < output_num; j++)
+                            for (unsigned long long int j = 0; j < output_num; j++)
                             {
-                                acc_learn += (unsigned long int)roundf(predictions_mini_batch[i][j] + 0.01) == (unsigned long int)roundf(datas_mini_batch[i * (input_num + output_num) + input_num + j] + 0.01);
+                                acc_learn += (unsigned long long int)roundf(predictions_mini_batch[i][j] + 0.01) == (unsigned long long int)roundf(datas_mini_batch[i * (input_num + output_num) + input_num + j] + 0.01);
                             }
                         }
                     }
@@ -1052,11 +1053,11 @@ int main()
                     if (strcmp(lossfunction_type, "multiclassification_crossentropy") == 0)
                     {
                         // Search the max ind in the predictions
-                        for (unsigned long int i = 0; i < mini_batch_len; i++)
+                        for (unsigned long long int i = 0; i < mini_batch_len; i++)
                         {
-                            unsigned long int pred_ind = 0;
+                            unsigned long long int pred_ind = 0;
                             float pred_max = predictions_mini_batch[i][0];
-                            for (unsigned long int j = 1; j < output_num; j++)
+                            for (unsigned long long int j = 1; j < output_num; j++)
                             {
                                 if (predictions_mini_batch[i][j] > pred_max)
                                 {
@@ -1066,9 +1067,9 @@ int main()
                             }
 
                             // Search the max ind in the true classes
-                            unsigned long int true_ind = 0;
+                            unsigned long long int true_ind = 0;
                             float true_max = datas_mini_batch[i * (input_num + output_num) + input_num + 0];
-                            for (unsigned long int j = 1; j < output_num; j++)
+                            for (unsigned long long int j = 1; j < output_num; j++)
                             {
                                 if (datas_mini_batch[i * (input_num + output_num) + input_num + j] > true_max)
                                 {
@@ -1083,12 +1084,12 @@ int main()
                 }
 
                 // Validation set
-                for (unsigned long int mini_batch_id = 0; mini_batch_id < mini_batch_num_valid; mini_batch_id++)
+                for (unsigned long long int mini_batch_id = 0; mini_batch_id < mini_batch_num_valid; mini_batch_id++)
                 {
-                    unsigned long int mini_batch_len;
+                    unsigned long long int mini_batch_len;
 
-                    unsigned long int mini_batch_si = mini_batch_id * mini_batch_size + learn_num;
-                    unsigned long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1 + learn_num;
+                    unsigned long long int mini_batch_si = mini_batch_id * mini_batch_size + learn_num;
+                    unsigned long long int mini_batch_ei = (mini_batch_id + 1) * mini_batch_size - 1 + learn_num;
                     if (mini_batch_ei > data_num - 1)
                     {
                         mini_batch_ei = data_num - 1;
@@ -1118,9 +1119,9 @@ int main()
                                             predictions_mini_batch);
                     }
 
-                    for (unsigned long int i = 0; i < mini_batch_len; i++)
+                    for (unsigned long long int i = 0; i < mini_batch_len; i++)
                     {
-                        for (unsigned long int j = 0; j < output_num; j++)
+                        for (unsigned long long int j = 0; j < output_num; j++)
                         {
                             fprintf(f, "%f ", predictions_mini_batch[i][j]);
                         }
@@ -1130,11 +1131,11 @@ int main()
                     if ((strcmp(lossfunction_type, "bce_multilabeling") == 0) || (strcmp(lossfunction_type, "multilabeling_crossentropy") == 0))
                     {
 
-                        for (unsigned long int i = 0; i < mini_batch_len; i++)
+                        for (unsigned long long int i = 0; i < mini_batch_len; i++)
                         {
-                            for (unsigned long int j = 0; j < output_num; j++)
+                            for (unsigned long long int j = 0; j < output_num; j++)
                             {
-                                acc_valid += (unsigned long int)roundf(predictions_mini_batch[i][j] + 0.01) == (unsigned long int)roundf(datas_mini_batch[i * (input_num + output_num) + input_num + j] + 0.01);
+                                acc_valid += (unsigned long long int)roundf(predictions_mini_batch[i][j] + 0.01) == (unsigned long long int)roundf(datas_mini_batch[i * (input_num + output_num) + input_num + j] + 0.01);
                             }
                         }
                     }
@@ -1142,11 +1143,11 @@ int main()
                     if (strcmp(lossfunction_type, "multiclassification_crossentropy") == 0)
                     {
                         // Search the max ind in the predictions
-                        for (unsigned long int i = 0; i < mini_batch_len; i++)
+                        for (unsigned long long int i = 0; i < mini_batch_len; i++)
                         {
-                            unsigned long int pred_ind = 0;
+                            unsigned long long int pred_ind = 0;
                             float pred_max = predictions_mini_batch[i][0];
-                            for (unsigned long int j = 1; j < output_num; j++)
+                            for (unsigned long long int j = 1; j < output_num; j++)
                             {
                                 if (predictions_mini_batch[i][j] > pred_max)
                                 {
@@ -1156,9 +1157,9 @@ int main()
                             }
 
                             // Search the max ind in the true classes
-                            unsigned long int true_ind = 0;
+                            unsigned long long int true_ind = 0;
                             float true_max = datas_mini_batch[i * (input_num + output_num) + input_num + 0];
-                            for (unsigned long int j = 1; j < output_num; j++)
+                            for (unsigned long long int j = 1; j < output_num; j++)
                             {
                                 if (datas_mini_batch[i * (input_num + output_num) + input_num + j] > true_max)
                                 {
@@ -1331,7 +1332,7 @@ int main()
     free(mth_weight);
     free(mth_bias);
 
-    for (unsigned long int i = 0; i < mini_batch_size; i++)
+    for (unsigned long long int i = 0; i < mini_batch_size; i++)
     {
         free(predictions_mini_batch[i]);
     }
@@ -1366,19 +1367,19 @@ void read_parameters(char file_name[100])
     if (f)
     {
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &seed);
+        fscanf(f, "%llu", &seed);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &thread_num);
+        fscanf(f, "%llu", &thread_num);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &tol_fixit);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &maxiter_grad);
+        fscanf(f, "%llu", &maxiter_grad);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &maxiter_fix);
+        fscanf(f, "%llu", &maxiter_fix);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &initdx);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &sfreq);
+        fscanf(f, "%llu", &sfreq);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", input_name);
         fscanf(f, "%s", temp_string);
@@ -1388,17 +1389,17 @@ void read_parameters(char file_name[100])
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", acc_name);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &data_num);
+        fscanf(f, "%llu", &data_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &learn_num);
+        fscanf(f, "%llu", &learn_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &mini_batch_size);
+        fscanf(f, "%llu", &mini_batch_size);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &neuron_num);
+        fscanf(f, "%llu", &neuron_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &input_num);
+        fscanf(f, "%llu", &input_num);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &output_num);
+        fscanf(f, "%llu", &output_num);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", graph_datas);
         fscanf(f, "%s", temp_string);
@@ -1410,7 +1411,7 @@ void read_parameters(char file_name[100])
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", lossfunction_type);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &optimizer);
+        fscanf(f, "%llu", &optimizer);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &grad_alpha);
         fscanf(f, "%s", temp_string);
@@ -1422,21 +1423,21 @@ void read_parameters(char file_name[100])
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &adam_eps);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &ff_optimization);
+        fscanf(f, "%llu", &ff_optimization);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &chunker);
+        fscanf(f, "%llu", &chunker);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &chunk_treshold);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &loaddatas);
+        fscanf(f, "%llu", &loaddatas);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", load_backup);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%s", save_backup);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &zero_optim_param);
+        fscanf(f, "%llu", &zero_optim_param);
         fscanf(f, "%s", temp_string);
-        fscanf(f, "%lu", &numgrad);
+        fscanf(f, "%llu", &numgrad);
         fscanf(f, "%s", temp_string);
         fscanf(f, "%f", &numgrad_eps);
         fclose(f);
@@ -1448,10 +1449,10 @@ void read_parameters(char file_name[100])
 }
 
 void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb_file_name[100],
-                unsigned long int *neighbour_number, unsigned long int *bias_number, unsigned long int **activation_type, unsigned long int **graph_n, unsigned long int **graph_i,
-                unsigned long int **graph_logic, unsigned long int **bias_logic, unsigned long int **parent_number,
+                unsigned long long int *neighbour_number, unsigned long long int *bias_number, unsigned long long int **activation_type, unsigned long long int **graph_n, unsigned long long int **graph_i,
+                unsigned long long int **graph_logic, unsigned long long int **bias_logic, unsigned long long int **parent_number,
                 float **fix_weight, float **fix_bias,
-                unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias)
+                unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias)
 {
     /**
      * Read graph data, allocate memory
@@ -1464,9 +1465,9 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
     if (f_graph && f_logic && f_fixwb)
     {
         // Read the graph
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            fscanf(f_graph, "%lu", &neighbour_number[neuron_id]);
+            fscanf(f_graph, "%llu", &neighbour_number[neuron_id]);
             fscanf(f_graph, "%s", temp_string);
 
             if (neuron_id > 0)
@@ -1475,24 +1476,24 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
             }
             all_neighbour_num += neighbour_number[neuron_id];
 
-            graph_n[neuron_id] = (unsigned long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long int));
-            graph_i[neuron_id] = (unsigned long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long int));
+            graph_n[neuron_id] = (unsigned long long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long long int));
+            graph_i[neuron_id] = (unsigned long long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long long int));
 
-            graph_logic[neuron_id] = (unsigned long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long int));
+            graph_logic[neuron_id] = (unsigned long long int *)malloc(neighbour_number[neuron_id] * sizeof(unsigned long long int));
             fix_weight[neuron_id] = (float *)malloc(neighbour_number[neuron_id] * sizeof(float));
 
-            for (unsigned long int i = 0; i < neighbour_number[neuron_id]; i++)
+            for (unsigned long long int i = 0; i < neighbour_number[neuron_id]; i++)
             {
-                fscanf(f_graph, "%lu", &graph_n[neuron_id][i]);
+                fscanf(f_graph, "%llu", &graph_n[neuron_id][i]);
                 graph_n[neuron_id][i]--;
-                fscanf(f_graph, "%lu", &graph_i[neuron_id][i]);
+                fscanf(f_graph, "%llu", &graph_i[neuron_id][i]);
                 graph_i[neuron_id][i]--;
                 fscanf(f_graph, "%s", temp_string);
             }
 
-            for (unsigned long int i = 0; i < neighbour_number[neuron_id]; i++)
+            for (unsigned long long int i = 0; i < neighbour_number[neuron_id]; i++)
             {
-                fscanf(f_logic, "%lu", &graph_logic[neuron_id][i]);
+                fscanf(f_logic, "%llu", &graph_logic[neuron_id][i]);
                 if (graph_logic[neuron_id][i] == 0)
                 {
                     fscanf(f_fixwb, "%f", &fix_weight[neuron_id][i]);
@@ -1503,7 +1504,7 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
             fscanf(f_logic, "%s", temp_string);
             fscanf(f_fixwb, "%s", temp_string);
 
-            fscanf(f_graph, "%lu", &bias_number[neuron_id]);
+            fscanf(f_graph, "%llu", &bias_number[neuron_id]);
             fscanf(f_graph, "%s", temp_string);
 
             if (neuron_id > 0)
@@ -1512,17 +1513,17 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
             }
             all_input_num += bias_number[neuron_id];
 
-            activation_type[neuron_id] = (unsigned long int *)malloc(bias_number[neuron_id] * sizeof(unsigned long int));
-            bias_logic[neuron_id] = (unsigned long int *)malloc(bias_number[neuron_id] * sizeof(unsigned long int));
+            activation_type[neuron_id] = (unsigned long long int *)malloc(bias_number[neuron_id] * sizeof(unsigned long long int));
+            bias_logic[neuron_id] = (unsigned long long int *)malloc(bias_number[neuron_id] * sizeof(unsigned long long int));
             fix_bias[neuron_id] = (float *)malloc(bias_number[neuron_id] * sizeof(float));
-            for (unsigned long int i = 0; i < bias_number[neuron_id]; i++)
+            for (unsigned long long int i = 0; i < bias_number[neuron_id]; i++)
             {
-                fscanf(f_graph, "%lu", &activation_type[neuron_id][i]);
+                fscanf(f_graph, "%llu", &activation_type[neuron_id][i]);
             }
 
-            for (unsigned long int i = 0; i < bias_number[neuron_id]; i++)
+            for (unsigned long long int i = 0; i < bias_number[neuron_id]; i++)
             {
-                fscanf(f_logic, "%lu", &bias_logic[neuron_id][i]);
+                fscanf(f_logic, "%llu", &bias_logic[neuron_id][i]);
                 if (bias_logic[neuron_id][i] == 0)
                 {
                     fscanf(f_fixwb, "%f", &fix_bias[neuron_id][i]);
@@ -1531,17 +1532,17 @@ void read_graph(char graph_file_name[100], char logic_file_name[100], char fixwb
         }
 
         // Calculate the numbers of the parents
-        for (unsigned long int i = 0; i < neuron_num; i++)
+        for (unsigned long long int i = 0; i < neuron_num; i++)
         {
-            parent_number[i] = (unsigned long int *)malloc((bias_number[i]) * sizeof(unsigned long int));
-            for (unsigned long int j = 0; j < bias_number[i]; j++)
+            parent_number[i] = (unsigned long long int *)malloc((bias_number[i]) * sizeof(unsigned long long int));
+            for (unsigned long long int j = 0; j < bias_number[i]; j++)
             {
                 parent_number[i][j] = 0;
             }
         };
-        for (unsigned long int i = 0; i < neuron_num; i++)
+        for (unsigned long long int i = 0; i < neuron_num; i++)
         {
-            for (unsigned long int j = 0; j < neighbour_number[i]; j++)
+            for (unsigned long long int j = 0; j < neighbour_number[i]; j++)
             {
                 parent_number[graph_n[i][j]][graph_i[i][j]]++;
             }
@@ -1565,22 +1566,22 @@ void program_failure(char str[])
     exit(EXIT_FAILURE);
 }
 
-void read_data(float *datas, unsigned long int line_number, FILE *f_data, unsigned long int test)
+void read_data(float *datas, unsigned long long int line_number, FILE *f_data, unsigned long long int test)
 {
     /**
      * Read the data
      */
     if (f_data)
     {
-        unsigned long int output_num_temp = 0;
+        unsigned long long int output_num_temp = 0;
         if (test == 0)
         {
             output_num_temp = output_num;
         }
 
-        for (unsigned long int i = 0; i < line_number; i++)
+        for (unsigned long long int i = 0; i < line_number; i++)
         {
-            for (unsigned long int j = 0; j < input_num + output_num_temp; j++)
+            for (unsigned long long int j = 0; j < input_num + output_num_temp; j++)
             {
                 fscanf(f_data, "%f", &datas[i * (input_num + output_num) + j]);
             }
@@ -1592,7 +1593,7 @@ void read_data(float *datas, unsigned long int line_number, FILE *f_data, unsign
     }
 }
 
-unsigned long int rand_range_int(unsigned long int min, unsigned long int max)
+unsigned long long int rand_range_int(unsigned long long int min, unsigned long long int max)
 {
     /**
      * Generates a random integer between min and max
@@ -1609,7 +1610,7 @@ float rand_range(float min, float max)
     return min + (float)rand() / RAND_MAX * (max - min);
 }
 
-float act_fun(float x, unsigned long int chooser)
+float act_fun(float x, unsigned long long int chooser)
 {
     /**
      * Calculate the activation function type `chooser` on the input `x`
@@ -1620,10 +1621,10 @@ float act_fun(float x, unsigned long int chooser)
         return x;
         break;
     case 1:
-        return 1.0 / (1.0 + exp(-x));
+        return 1.0 / (1.0 + expf(-x));
         break;
     case 2:
-        return tanh(x);
+        return tanhf(x);
         // if (x>0){
         //     return x/(1.0+x);
         // }
@@ -1643,7 +1644,7 @@ float act_fun(float x, unsigned long int chooser)
         }
         break;
     case 4:
-        return x / (1.0 + exp(-x));
+        return x / (1.0 + expf(-x));
         break;
     case 6:
         return 1.0 - x;
@@ -1652,7 +1653,7 @@ float act_fun(float x, unsigned long int chooser)
         return 1.0 / x;
         break;
     case 8:
-        return cos(x);
+        return cosf(x);
         break;
     case 9:
         return atanf(x);
@@ -1663,7 +1664,7 @@ float act_fun(float x, unsigned long int chooser)
     }
 }
 
-float act_fun_diff(float x, unsigned long int chooser)
+float act_fun_diff(float x, unsigned long long int chooser)
 {
     /**
      * Calculate the derivative of the activation function type `chooser` on the input `x`
@@ -1677,7 +1678,7 @@ float act_fun_diff(float x, unsigned long int chooser)
         return act_fun(x, chooser) * (1.0 - act_fun(x, chooser));
         break;
     case 2:
-        return 1.0 - tanh(x) * tanh(x);
+        return 1.0 - tanhf(x) * tanhf(x);
         // if (x>0){
         //     return 1.0/((1.0+x)*(1.0+x));
         // }
@@ -1697,16 +1698,16 @@ float act_fun_diff(float x, unsigned long int chooser)
         }
         break;
     case 4:
-        return (1.0 + exp(-x) + x * exp(-x)) / pow(1.0 + exp(-x), 2.0);
+        return (1.0 + expf(-x) + x * expf(-x)) / powf(1.0 + expf(-x), 2.0);
         break;
     case 6:
         return -1.0;
         break;
     case 7:
-        return -1.0 / pow(x, 2.0);
+        return -1.0 / powf(x, 2.0);
         break;
     case 8:
-        return -sin(x);
+        return -sinf(x);
         break;
     case 9:
         return 1.0 / (1.0 + x * x);
@@ -1717,7 +1718,7 @@ float act_fun_diff(float x, unsigned long int chooser)
     }
 }
 
-float calc_error(float *neuron_value, float *target_vector, unsigned long int mini_batch_len)
+float calc_error(float *neuron_value, float *target_vector, unsigned long long int mini_batch_len)
 {
     /*
     Calculating the error functions
@@ -1727,12 +1728,12 @@ float calc_error(float *neuron_value, float *target_vector, unsigned long int mi
     {
 
         float returner = 0.0;
-        for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+        for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
         {
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                returner += pow((neuron_value[data_index * neuron_num + neuron_id] - target_vector[data_index * output_num + i]), 2);
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                returner += powf((neuron_value[data_index * neuron_num + neuron_id] - target_vector[data_index * output_num + i]), 2);
             }
         }
         return returner;
@@ -1741,16 +1742,16 @@ float calc_error(float *neuron_value, float *target_vector, unsigned long int mi
     {
         float returner = 0.0;
 
-        for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+        for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
         {
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int neuron_id = neuron_num - output_num + i;
                 if ((neuron_value[data_index * neuron_num + neuron_id] > 0.0) && (neuron_value[data_index * neuron_num + neuron_id] < 1.0))
                 {
                     returner -=
-                        target_vector[data_index * output_num + i] * log(neuron_value[data_index * neuron_num + neuron_id]) +
-                        (1.0 - target_vector[data_index * output_num + i]) * log(1.0 - neuron_value[data_index * neuron_num + neuron_id]);
+                        target_vector[data_index * output_num + i] * logf(neuron_value[data_index * neuron_num + neuron_id]) +
+                        (1.0 - target_vector[data_index * output_num + i]) * logf(1.0 - neuron_value[data_index * neuron_num + neuron_id]);
                 }
             }
         }
@@ -1761,14 +1762,14 @@ float calc_error(float *neuron_value, float *target_vector, unsigned long int mi
     {
 
         float returner = 0.0;
-        for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+        for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
         {
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int neuron_id = neuron_num - output_num + i;
                 returner +=
                     (1.0 - target_vector[data_index * output_num + i]) * neuron_value[data_index * neuron_num + neuron_id] +
-                    log(1.0 + exp(-neuron_value[data_index * neuron_num + neuron_id]));
+                    logf(1.0 + expf(-neuron_value[data_index * neuron_num + neuron_id]));
             }
         }
         return returner;
@@ -1777,24 +1778,24 @@ float calc_error(float *neuron_value, float *target_vector, unsigned long int mi
     if (strcmp(lossfunction_type, "multiclassification_crossentropy") == 0)
     {
         float returner = 0.0;
-        for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+        for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
         {
 
             float *softmax_vec = (float *)malloc(output_num * sizeof(float));
 
             float sum_softmax = 0.0;
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int neuron_id = neuron_num - output_num + i;
                 softmax_vec[i] = neuron_value[data_index * neuron_num + neuron_id];
-                sum_softmax += exp(softmax_vec[i]);
+                sum_softmax += expf(softmax_vec[i]);
             }
 
             // softmax(softmax_vec, output_num);
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                returner -= target_vector[data_index * output_num + i] * (softmax_vec[i] - log(sum_softmax));
+                returner -= target_vector[data_index * output_num + i] * (softmax_vec[i] - logf(sum_softmax));
             }
 
             free(softmax_vec);
@@ -1803,7 +1804,7 @@ float calc_error(float *neuron_value, float *target_vector, unsigned long int mi
     }
 }
 
-unsigned long int imax(unsigned long int a, unsigned long int b)
+unsigned long long int imax(unsigned long long int a, unsigned long long int b)
 {
     /**
      * Returns max(a,b) --- integer
@@ -1818,24 +1819,24 @@ unsigned long int imax(unsigned long int a, unsigned long int b)
     }
 }
 
-void copy_dmatrix(float **input_matrix, unsigned long int row_num, unsigned long int *col_num, float *output_matrix)
+void copy_dmatrix(float **input_matrix, unsigned long long int row_num, unsigned long long int *col_num, float *output_matrix)
 {
-    unsigned long int ind = 0;
-    for (unsigned long int i = 0; i < row_num; i++)
+    unsigned long long int ind = 0;
+    for (unsigned long long int i = 0; i < row_num; i++)
     {
-        for (unsigned long int j = 0; j < col_num[i]; j++)
+        for (unsigned long long int j = 0; j < col_num[i]; j++)
         {
             output_matrix[ind] = input_matrix[i][j];
             ind++;
         }
     }
 }
-void copy_imatrix(unsigned long int **input_matrix, unsigned long int row_num, unsigned long int *col_num, unsigned long int *output_matrix)
+void copy_imatrix(unsigned long long int **input_matrix, unsigned long long int row_num, unsigned long long int *col_num, unsigned long long int *output_matrix)
 {
-    unsigned long int ind = 0;
-    for (unsigned long int i = 0; i < row_num; i++)
+    unsigned long long int ind = 0;
+    for (unsigned long long int i = 0; i < row_num; i++)
     {
-        for (unsigned long int j = 0; j < col_num[i]; j++)
+        for (unsigned long long int j = 0; j < col_num[i]; j++)
         {
             output_matrix[ind] = input_matrix[i][j];
             ind++;
@@ -1843,55 +1844,55 @@ void copy_imatrix(unsigned long int **input_matrix, unsigned long int row_num, u
     }
 }
 
-float **allocate_dmatrix(unsigned long int row_num, unsigned long int *col_num)
+float **allocate_dmatrix(unsigned long long int row_num, unsigned long long int *col_num)
 {
     float **returner = (float **)malloc(row_num * sizeof(float *));
-    for (unsigned long int i = 0; i < row_num; i++)
+    for (unsigned long long int i = 0; i < row_num; i++)
     {
         returner[i] = (float *)malloc(col_num[i] * sizeof(float));
     }
     return returner;
 }
 
-unsigned long int **allocate_imatrix(unsigned long int row_num, unsigned long int *col_num)
+unsigned long long int **allocate_imatrix(unsigned long long int row_num, unsigned long long int *col_num)
 {
-    unsigned long int **returner = (unsigned long int **)malloc(row_num * sizeof(unsigned long int *));
-    for (unsigned long int i = 0; i < row_num; i++)
+    unsigned long long int **returner = (unsigned long long int **)malloc(row_num * sizeof(unsigned long long int *));
+    for (unsigned long long int i = 0; i < row_num; i++)
     {
-        returner[i] = (unsigned long int *)malloc(col_num[i] * sizeof(unsigned long int));
+        returner[i] = (unsigned long long int *)malloc(col_num[i] * sizeof(unsigned long long int));
     }
     return returner;
 }
 
-void deallocate_dmatrix(float **m, unsigned long int row_num)
+void deallocate_dmatrix(float **m, unsigned long long int row_num)
 {
-    for (unsigned long int i = 0; i < row_num; i++)
+    for (unsigned long long int i = 0; i < row_num; i++)
     {
         free(m[i]);
     }
     free(m);
 }
 
-void deallocate_imatrix(unsigned long int **m, unsigned long int row_num)
+void deallocate_imatrix(unsigned long long int **m, unsigned long long int row_num)
 {
-    for (unsigned long int i = 0; i < row_num; i++)
+    for (unsigned long long int i = 0; i < row_num; i++)
     {
         free(m[i]);
     }
     free(m);
 }
 
-void print_progress_bar(unsigned long int max_length, float rate)
+void print_progress_bar(unsigned long long int max_length, float rate)
 {
 
     printf("[");
-    unsigned long int act_length = round(max_length * rate);
-    for (unsigned long int i = 0; i < act_length; i++)
+    unsigned long long int act_length = round(max_length * rate);
+    for (unsigned long long int i = 0; i < act_length; i++)
     {
         printf("=");
     }
     printf(">");
-    for (unsigned long int i = 0; i < max_length - act_length; i++)
+    for (unsigned long long int i = 0; i < max_length - act_length; i++)
     {
         printf(".");
     }
@@ -1917,7 +1918,7 @@ float random_normal(float mean, float std_dev)
         u = rand_range(0.0, 1.0);
 
     // Compute r
-    r = sqrt(-2.0 * log(u));
+    r = sqrtf(-2.0 * logf(u));
 
     // Generate theta
     theta = 0.0;
@@ -1925,7 +1926,7 @@ float random_normal(float mean, float std_dev)
         theta = 2.0 * M_PI * rand_range(0.0, 1.0);
 
     // Generate x value
-    x = r * cos(theta);
+    x = r * cosf(theta);
 
     // Adjust x value for specified mean and variance
     norm_rv = (x * std_dev) + mean;
@@ -1934,11 +1935,11 @@ float random_normal(float mean, float std_dev)
     return (norm_rv);
 }
 
-void softmax(float *input, unsigned long int input_len)
+void softmax(float *input, unsigned long long int input_len)
 {
     //    assert (input != NULL);
     //    assert (input_len != 0);
-    unsigned long int i;
+    unsigned long long int i;
     float m;
     /* Find maximum value from input array */
     m = input[0];
@@ -1953,51 +1954,51 @@ void softmax(float *input, unsigned long int input_len)
     float sum = 0;
     for (i = 0; i < input_len; i++)
     {
-        sum += exp(input[i] - m);
+        sum += expf(input[i] - m);
     }
 
     for (i = 0; i < input_len; i++)
     {
-        input[i] = exp(input[i] - m - log(sum));
+        input[i] = expf(input[i] - m - logf(sum));
     }
 }
 
-void initialize_weights(unsigned long int *neighbour_number, unsigned long int *bias_number, unsigned long int **activation_type, unsigned long int **graph_n, unsigned long int **graph_i,
-                        unsigned long int **parent_number, float **weight, float **bias)
+void initialize_weights(unsigned long long int *neighbour_number, unsigned long long int *bias_number, unsigned long long int **activation_type, unsigned long long int **graph_n, unsigned long long int **graph_i,
+                        unsigned long long int **parent_number, float **weight, float **bias)
 {
     /**
      *  Initialize the weights and the biases
      */
 
     // Initialize the weights
-    for (unsigned long int i = 0; i < neuron_num; i++)
+    for (unsigned long long int i = 0; i < neuron_num; i++)
     {
         weight[i] = (float *)malloc((neighbour_number[i]) * sizeof(float));
-        for (unsigned long int j = 0; j < neighbour_number[i]; j++)
+        for (unsigned long long int j = 0; j < neighbour_number[i]; j++)
         {
             // weight[i][j] = rand_range(-initdx, initdx) / (float)(parent_number[graph_n[i][j]][graph_i[i][j]] + 1.0);
             weight[i][j] = rand_range(-initdx, initdx) / (float)(parent_number[graph_n[i][j]][graph_i[i][j]] + neighbour_number[i]);
-            // weight[i][j] = random_normal(0.0, 1.0) * sqrt(initdx * 2.0 / (parent_number[graph_n[i][j]][graph_i[i][j]])+1.0);
-            // weight[i][j] = random_normal(0.0, 1.0) * sqrt(initdx * 2.0 / (parent_number[graph_n[i][j]][graph_i[i][j]]+neighbour_number[i]));
+            // weight[i][j] = random_normal(0.0, 1.0) * sqrtf(initdx * 2.0 / (parent_number[graph_n[i][j]][graph_i[i][j]])+1.0);
+            // weight[i][j] = random_normal(0.0, 1.0) * sqrtf(initdx * 2.0 / (parent_number[graph_n[i][j]][graph_i[i][j]]+neighbour_number[i]));
         }
     };
 
     // Initialize the bias
-    for (unsigned long int i = 0; i < neuron_num; i++)
+    for (unsigned long long int i = 0; i < neuron_num; i++)
     {
         bias[i] = (float *)malloc((bias_number[i]) * sizeof(float));
-        for (unsigned long int j = 0; j < bias_number[i]; j++)
+        for (unsigned long long int j = 0; j < bias_number[i]; j++)
         {
             bias[i][j] = 0.0;
         }
     }
 }
 
-float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
-                               unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                               unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                               unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                               unsigned long int *graph_p_ind_n_g,
+float calc_gradient_mini_batch(float *datas, unsigned long long int mini_batch_len,
+                               unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                               unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                               unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                               unsigned long long int *graph_p_ind_n_g,
                                float *weight_g, float *bias_g,
                                float *weight_grad_g, float *bias_grad_g,
                                float *iter_forward, float *iter_backward)
@@ -2008,7 +2009,7 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
     float error_mini_batch = 0.0;
     float iter_forward_temp = 0.0;
     float iter_backward_temp = 0.0;
-    unsigned long int nthreads;
+    unsigned long long int nthreads;
 
     // Reset gradients
     set_zero_gpu<<<(all_neighbour_num + TPB - 1) / TPB, TPB>>>(weight_grad_g, all_neighbour_num);
@@ -2023,7 +2024,7 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
     // Loop over the elements on the elements of the mini-batch
 
     float error_temp;
-    unsigned long int iter_f, iter_b;
+    unsigned long long int iter_f, iter_b;
     float error_iter;
 
     float *input_value = (float *)calloc(mini_batch_len * all_input_num, sizeof(float));
@@ -2039,8 +2040,8 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
     float *output_value = (float *)calloc(mini_batch_len * output_num, sizeof(float));
     float *weight_trans = (float *)calloc(all_neighbour_num, sizeof(float));
 
-    unsigned long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
-    unsigned long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
+    unsigned long long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
+    unsigned long long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
     dim3 dimGrid(grid_rows, grid_cols);
     dim3 dimBlock(BLOCK_SIZE_X, BLOCK_SIZE_Y);
 
@@ -2109,12 +2110,15 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
 
         // Calculating the error and L1-error
         // maxnormDiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
-        l1normdiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
+        //l1normdiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
+        cudaMemcpy(input_value, input_value_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
+        cudaMemcpy(input_value_old, input_value_old_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
 
-        cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
         cudaThreadSynchronize();
+        error_iter = calc_diff_vectors(input_value, input_value_old, all_input_num * mini_batch_len);
 
-        error_iter = error_iter_c[0];
+        //error_iter = error_iter_c[0];
     }
 
     //++++++++++++++++++++++++++//
@@ -2136,10 +2140,10 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
     cudaMemcpy(neuron_value, neuron_value_g, sizeof(float) * mini_batch_len * neuron_num, cudaMemcpyDeviceToHost);
     cudaThreadSynchronize();
 
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
         // Output neurons and targets
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
             output_value[data_index * output_num + i] = neuron_value[data_index * neuron_num + neuron_num - output_num + i];
             target_vector[data_index * output_num + i] = datas[data_index * (input_num + output_num) + input_num + i];
@@ -2147,13 +2151,13 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
         if (strcmp(lossfunction_type, "multiclassification_crossentropy") == 0)
         {
             float *output_value_temp = (float *)malloc(output_num * sizeof(float));
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
                 output_value_temp[i] = output_value[data_index * output_num + i];
             }
             softmax(output_value_temp, output_num);
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
                 output_value[data_index * output_num + i] = output_value_temp[i];
             }
@@ -2164,11 +2168,11 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
         if ((strcmp(lossfunction_type, "multiclassification_crossentropy") == 0) || (strcmp(lossfunction_type, "sumsquared") == 0))
         {
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                unsigned long int startind = first_ind_bias[neuron_id];
-                for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int startind = first_ind_bias[neuron_id];
+                for (unsigned long long int j = 0; j < bias_number[neuron_id]; j++)
                 {
                     weight_grad_inp_old[data_index * all_input_num + startind + j] =
                         (output_value[data_index * output_num + i] - target_vector[data_index * output_num + i]) *
@@ -2180,11 +2184,11 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
         if (strcmp(lossfunction_type, "multilabeling_crossentropy") == 0)
         {
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                unsigned long int startind = first_ind_bias[neuron_id];
-                for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int startind = first_ind_bias[neuron_id];
+                for (unsigned long long int j = 0; j < bias_number[neuron_id]; j++)
                 {
                     if ((output_value[data_index * output_num + i] > 0.0) && (output_value[data_index * output_num + i] < 1.0))
                     {
@@ -2199,11 +2203,11 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
         if (strcmp(lossfunction_type, "bce_multilabeling") == 0)
         {
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                unsigned long int startind = first_ind_bias[neuron_id];
-                for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int startind = first_ind_bias[neuron_id];
+                for (unsigned long long int j = 0; j < bias_number[neuron_id]; j++)
                 {
                     weight_grad_inp_old[data_index * all_input_num + startind + j] =
                         act_fun(output_value[data_index * output_num + i], 1) - target_vector[data_index * output_num + i];
@@ -2240,12 +2244,14 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
 
         // Max abs error and L1-error
         // maxnorm<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(weight_grad_inp_temp_g, all_input_num * mini_batch_len, error_iter_g);
-        l1norm<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(weight_grad_inp_temp_g, all_input_num * mini_batch_len, error_iter_g);
+        //l1norm<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(weight_grad_inp_temp_g, all_input_num * mini_batch_len, error_iter_g);
+        cudaMemcpy(weight_grad_inp_temp, weight_grad_inp_temp_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
 
-        cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
         cudaThreadSynchronize();
+        error_iter = calc_vector_norm(weight_grad_inp_temp, all_input_num * mini_batch_len);
 
-        error_iter = error_iter_c[0];
+        //error_iter = error_iter_c[0];
     }
 
     // Calculating the gradients
@@ -2304,17 +2310,17 @@ float calc_gradient_mini_batch(float *datas, unsigned long int mini_batch_len,
     return error_mini_batch;
 }
 
-float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
-                                  unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                                  unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                                  unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                                  unsigned long int *graph_p_ind_n_g,
+float calc_gradient_mini_batch_ff(float *datas, unsigned long long int mini_batch_len,
+                                  unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                                  unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                                  unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                                  unsigned long long int *graph_p_ind_n_g,
                                   float *weight_g, float *bias_g,
                                   float *weight_grad_g, float *bias_grad_g,
                                   float *iter_forward, float *iter_backward,
-                                  unsigned long int dist_max,
-                                  unsigned long int *dist_g, unsigned long int *dist,
-                                  unsigned long int *dist_input_g, unsigned long int *dist_input)
+                                  unsigned long long int dist_max,
+                                  unsigned long long int *dist_g, unsigned long long int *dist,
+                                  unsigned long long int *dist_input_g, unsigned long long int *dist_input)
 {
     // Calculating the gradient on a mini-batch
 
@@ -2322,7 +2328,7 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     float error_mini_batch = 0.0;
     float iter_forward_temp = 0.0;
     float iter_backward_temp = 0.0;
-    unsigned long int nthreads;
+    unsigned long long int nthreads;
 
     // Reset gradients
     set_zero_gpu<<<(all_neighbour_num + TPB - 1) / TPB, TPB>>>(weight_grad_g, all_neighbour_num);
@@ -2334,7 +2340,7 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     //                          //
     //++++++++++++++++++++++++++//
 
-    unsigned long int iter_f, iter_b;
+    unsigned long long int iter_f, iter_b;
 
     float *input_value = (float *)calloc(mini_batch_len * all_input_num, sizeof(float));
     float *neuron_value = (float *)calloc(mini_batch_len * neuron_num, sizeof(float));
@@ -2345,8 +2351,8 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     float *output_value = (float *)calloc(mini_batch_len * output_num, sizeof(float));
     float *weight_trans = (float *)calloc(all_neighbour_num, sizeof(float));
 
-    unsigned long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
-    unsigned long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
+    unsigned long long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
+    unsigned long long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
     dim3 dimGrid(grid_rows, grid_cols);
     dim3 dimBlock(BLOCK_SIZE_X, BLOCK_SIZE_Y);
 
@@ -2389,9 +2395,9 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     //++++++++++++++++++++++++++//
 
     // The main loop
-    unsigned long int iter_fix = 0;
+    unsigned long long int iter_fix = 0;
 
-    for (unsigned long int layer_id = 0; layer_id < dist_max; layer_id++) // Here we need `<=` because the indexing of the layers
+    for (unsigned long long int layer_id = 0; layer_id < dist_max; layer_id++) // Here we need `<=` because the indexing of the layers
     {
         iter_f++;
         calc_neuron_mb_gpu_ff<<<dimGrid, dimBlock>>>(bias_number_g, first_ind_bias_g, activation_type_g,
@@ -2423,10 +2429,10 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     cudaMemcpy(neuron_value, neuron_value_g, sizeof(float) * mini_batch_len * neuron_num, cudaMemcpyDeviceToHost);
     cudaThreadSynchronize();
 
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
         // Output neurons and targets
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
             output_value[data_index * output_num + i] = neuron_value[data_index * neuron_num + neuron_num - output_num + i];
             target_vector[data_index * output_num + i] = datas[data_index * (input_num + output_num) + input_num + i];
@@ -2434,13 +2440,13 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
         if (strcmp(lossfunction_type, "multiclassification_crossentropy") == 0)
         {
             float *output_value_temp = (float *)malloc(output_num * sizeof(float));
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
                 output_value_temp[i] = output_value[data_index * output_num + i];
             }
             softmax(output_value_temp, output_num);
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
                 output_value[data_index * output_num + i] = output_value_temp[i];
             }
@@ -2451,11 +2457,11 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
         if ((strcmp(lossfunction_type, "multiclassification_crossentropy") == 0) || (strcmp(lossfunction_type, "sumsquared") == 0))
         {
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                unsigned long int startind = first_ind_bias[neuron_id];
-                for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int startind = first_ind_bias[neuron_id];
+                for (unsigned long long int j = 0; j < bias_number[neuron_id]; j++)
                 {
                     weight_grad_inp[data_index * all_input_num + startind + j] =
                         (output_value[data_index * output_num + i] - target_vector[data_index * output_num + i]) *
@@ -2467,11 +2473,11 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
         if (strcmp(lossfunction_type, "multilabeling_crossentropy") == 0)
         {
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                unsigned long int startind = first_ind_bias[neuron_id];
-                for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int startind = first_ind_bias[neuron_id];
+                for (unsigned long long int j = 0; j < bias_number[neuron_id]; j++)
                 {
                     if ((output_value[data_index * output_num + i] > 0.0) && (output_value[data_index * output_num + i] < 1.0))
                     {
@@ -2486,11 +2492,11 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
         if (strcmp(lossfunction_type, "bce_multilabeling") == 0)
         {
 
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
-                unsigned long int neuron_id = neuron_num - output_num + i;
-                unsigned long int startind = first_ind_bias[neuron_id];
-                for (unsigned long int j = 0; j < bias_number[neuron_id]; j++)
+                unsigned long long int neuron_id = neuron_num - output_num + i;
+                unsigned long long int startind = first_ind_bias[neuron_id];
+                for (unsigned long long int j = 0; j < bias_number[neuron_id]; j++)
                 {
                     weight_grad_inp[data_index * all_input_num + startind + j] =
                         act_fun(output_value[data_index * output_num + i], 1) - target_vector[data_index * output_num + i];
@@ -2510,7 +2516,7 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     //                          //
     //++++++++++++++++++++++++++//
 
-    for (unsigned long int layer_id = dist_max - 1; layer_id > 0; layer_id--)
+    for (unsigned long long int layer_id = dist_max - 1; layer_id > 0; layer_id--)
     {
         iter_b++;
 
@@ -2575,11 +2581,11 @@ float calc_gradient_mini_batch_ff(float *datas, unsigned long int mini_batch_len
     return error_mini_batch;
 }
 
-float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
-                              unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                              unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                              unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                              unsigned long int *graph_p_ind_n_g,
+float calc_network_mini_batch(float *datas, unsigned long long int mini_batch_len,
+                              unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                              unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                              unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                              unsigned long long int *graph_p_ind_n_g,
                               float *weight_trans_g, float *bias_g,
                               float *iter_forward)
 {
@@ -2587,7 +2593,7 @@ float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
     float error_mini_batch = 0.0;
     float iter_forward_temp = 0.0;
 
-    unsigned long int nthreads;
+    unsigned long long int nthreads;
 
     //++++++++++++++++++++++++++//
     //                          //
@@ -2598,7 +2604,7 @@ float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
     // Loop over the elements on the elements of the mini-batch
 
     float error_temp;
-    unsigned long int iter_f;
+    unsigned long long int iter_f;
     float error_iter;
 
     float *input_value = (float *)calloc(mini_batch_len * all_input_num, sizeof(float));
@@ -2621,8 +2627,8 @@ float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
     cudaMemcpy(datas_g, datas, sizeof(float) * mini_batch_len * (input_num + output_num), cudaMemcpyHostToDevice);
     cudaMemcpy(input_value_g, input_value, sizeof(float) * all_input_num * mini_batch_len, cudaMemcpyHostToDevice);
 
-    unsigned long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
-    unsigned long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
+    unsigned long long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
+    unsigned long long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
     dim3 dimGrid(grid_rows, grid_cols);
     dim3 dimBlock(BLOCK_SIZE_X, BLOCK_SIZE_Y);
 
@@ -2634,7 +2640,7 @@ float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
     cudaMemcpy(neuron_value_g, neuron_value, sizeof(float) * neuron_num * mini_batch_len, cudaMemcpyHostToDevice);
 
     float *error_iter_g;
-    unsigned long int *maxid_g;
+    unsigned long long int *maxid_g;
 
     cudaMalloc((void **)&error_iter_g, sizeof(float));
 
@@ -2668,18 +2674,19 @@ float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
 
         // Calculating the error
         // maxnormDiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
-        l1normdiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
+        //l1normdiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
+        cudaMemcpy(input_value, input_value_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
+        cudaMemcpy(input_value_old, input_value_old_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
 
-        cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
+        //cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
         cudaThreadSynchronize();
-
-        error_iter = error_iter_c[0];
+        error_iter = calc_diff_vectors(input_value, input_value_old, all_input_num * mini_batch_len);
     }
 
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
         // Targets
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
             target_vector[data_index * output_num + i] = datas[data_index * (input_num + output_num) + input_num + i];
         }
@@ -2713,19 +2720,19 @@ float calc_network_mini_batch(float *datas, unsigned long int mini_batch_len,
     return error_mini_batch;
 }
 
-float calc_network_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
-                                 unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                                 unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                                 unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                                 unsigned long int *graph_p_ind_n_g,
+float calc_network_mini_batch_ff(float *datas, unsigned long long int mini_batch_len,
+                                 unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                                 unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                                 unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                                 unsigned long long int *graph_p_ind_n_g,
                                  float *weight_trans_g, float *bias_g,
                                  float *iter_forward,
-                                 unsigned long int dist_max,
-                                 unsigned long int *dist_g, unsigned long int *dist,
-                                 unsigned long int *dist_input_g, unsigned long int *dist_input)
+                                 unsigned long long int dist_max,
+                                 unsigned long long int *dist_g, unsigned long long int *dist,
+                                 unsigned long long int *dist_input_g, unsigned long long int *dist_input)
 {
 
-    unsigned long int iter_f = 0;
+    unsigned long long int iter_f = 0;
     float error_iter = inf, error_mini_batch = 0.0;
 
     float *neuron_value = (float *)calloc(mini_batch_len * neuron_num, sizeof(float));
@@ -2741,8 +2748,8 @@ float calc_network_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
     cudaMemcpy(input_value_g, input_value, sizeof(float) * all_input_num * mini_batch_len, cudaMemcpyHostToDevice);
     cudaMemcpy(neuron_value_g, neuron_value, sizeof(float) * neuron_num * mini_batch_len, cudaMemcpyHostToDevice);
 
-    unsigned long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
-    unsigned long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
+    unsigned long long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
+    unsigned long long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
     dim3 dimGrid(grid_rows, grid_cols);
     dim3 dimBlock(BLOCK_SIZE_X, BLOCK_SIZE_Y);
 
@@ -2752,9 +2759,9 @@ float calc_network_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
     add_bias_bcast<<<dimGrid, dimBlock>>>(mini_batch_len, all_input_num, bias_g, input_value_g);
 
     // The main loop
-    unsigned long int iter_fix = 0;
+    unsigned long long int iter_fix = 0;
 
-    for (unsigned long int layer_id = 0; layer_id < dist_max; layer_id++) // Here we need `<=` because the indexing of the layers
+    for (unsigned long long int layer_id = 0; layer_id < dist_max; layer_id++) // Here we need `<=` because the indexing of the layers
     {
         iter_fix++;
         calc_neuron_mb_gpu_ff<<<dimGrid, dimBlock>>>(bias_number_g, first_ind_bias_g, activation_type_g,
@@ -2770,9 +2777,9 @@ float calc_network_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
                                                  dist_max, dist_g);
 
     // Targets
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
             target_vector[data_index * output_num + i] = datas[data_index * (input_num + output_num) + input_num + i];
         }
@@ -2798,22 +2805,22 @@ float calc_network_mini_batch_ff(float *datas, unsigned long int mini_batch_len,
     return error_mini_batch;
 }
 
-void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
-                         unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                         unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                         unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                         unsigned long int *graph_p_ind_n_g,
+void make_predictions_ff(float *datas, unsigned long long int mini_batch_len,
+                         unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                         unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                         unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                         unsigned long long int *graph_p_ind_n_g,
                          float *weight_trans_g, float *bias_g,
-                         unsigned long int dist_max,
-                         unsigned long int *dist_g, unsigned long int *dist,
-                         unsigned long int *dist_input_g, unsigned long int *dist_input,
+                         unsigned long long int dist_max,
+                         unsigned long long int *dist_g, unsigned long long int *dist,
+                         unsigned long long int *dist_input_g, unsigned long long int *dist_input,
                          float **predictions_mini_batch)
 {
-    unsigned long int iter_f = 0;
+    unsigned long long int iter_f = 0;
 
-    for (unsigned long int i = 0; i < mini_batch_len; i++)
+    for (unsigned long long int i = 0; i < mini_batch_len; i++)
     {
-        for (unsigned long int j = 0; j < output_num; j++)
+        for (unsigned long long int j = 0; j < output_num; j++)
         {
             predictions_mini_batch[i][j] = 0.0;
         }
@@ -2834,8 +2841,8 @@ void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
     cudaMemcpy(input_value_g, input_value, sizeof(float) * all_input_num * mini_batch_len, cudaMemcpyHostToDevice);
     cudaMemcpy(neuron_value_g, neuron_value, sizeof(float) * neuron_num * mini_batch_len, cudaMemcpyHostToDevice);
 
-    unsigned long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
-    unsigned long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
+    unsigned long long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
+    unsigned long long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
     dim3 dimGrid(grid_rows, grid_cols);
     dim3 dimBlock(BLOCK_SIZE_X, BLOCK_SIZE_Y);
 
@@ -2845,9 +2852,9 @@ void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
     add_bias_bcast<<<dimGrid, dimBlock>>>(mini_batch_len, all_input_num, bias_g, input_value_g);
 
     // The main loop
-    unsigned long int iter_fix = 0;
+    unsigned long long int iter_fix = 0;
 
-    for (unsigned long int layer_id = 0; layer_id < dist_max; layer_id++) // Here we need `<=` because the indexing of the layers
+    for (unsigned long long int layer_id = 0; layer_id < dist_max; layer_id++) // Here we need `<=` because the indexing of the layers
     {
         iter_fix++;
         calc_neuron_mb_gpu_ff<<<dimGrid, dimBlock>>>(bias_number_g, first_ind_bias_g, activation_type_g,
@@ -2863,9 +2870,9 @@ void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
                                                  dist_max, dist_g);
 
     // Targets
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
             target_vector[data_index * output_num + i] = datas[data_index * (input_num + output_num) + input_num + i];
         }
@@ -2875,12 +2882,12 @@ void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
     cudaThreadSynchronize();
 
     // Copying the predictions to predictions_mini_batch
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
         // Calculate the output
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
-            unsigned long int neuron_id = neuron_num - output_num + i;
+            unsigned long long int neuron_id = neuron_num - output_num + i;
             output_value[i] = neuron_value[data_index * neuron_num + neuron_id];
         }
 
@@ -2892,14 +2899,14 @@ void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
 
         if (strcmp(lossfunction_type, "bce_multilabeling") == 0)
         {
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
 
                 output_value[i] = act_fun(output_value[i], 1);
             }
         }
 
-        for (unsigned long int j = 0; j < output_num; j++)
+        for (unsigned long long int j = 0; j < output_num; j++)
         {
             predictions_mini_batch[data_index][j] = output_value[j];
         }
@@ -2915,11 +2922,11 @@ void make_predictions_ff(float *datas, unsigned long int mini_batch_len,
     free(output_value);
 }
 
-void make_predictions(float *datas, unsigned long int mini_batch_len,
-                      unsigned long int *neighbour_number_g, unsigned long int *neighbour_number, unsigned long int *bias_number_g, unsigned long int *bias_number, unsigned long int *parent_number_g,
-                      unsigned long int *first_ind_neighbour_g, unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias_g, unsigned long int *first_ind_bias, unsigned long int *first_ind_parent_g,
-                      unsigned long int *activation_type_g, unsigned long int *activation_type, unsigned long int *graph_n_g, unsigned long int *graph_n, unsigned long int *graph_i_g, unsigned long int *graph_i, unsigned long int *graph_p_g,
-                      unsigned long int *graph_p_ind_n_g,
+void make_predictions(float *datas, unsigned long long int mini_batch_len,
+                      unsigned long long int *neighbour_number_g, unsigned long long int *neighbour_number, unsigned long long int *bias_number_g, unsigned long long int *bias_number, unsigned long long int *parent_number_g,
+                      unsigned long long int *first_ind_neighbour_g, unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias_g, unsigned long long int *first_ind_bias, unsigned long long int *first_ind_parent_g,
+                      unsigned long long int *activation_type_g, unsigned long long int *activation_type, unsigned long long int *graph_n_g, unsigned long long int *graph_n, unsigned long long int *graph_i_g, unsigned long long int *graph_i, unsigned long long int *graph_p_g,
+                      unsigned long long int *graph_p_ind_n_g,
                       float *weight_trans_g, float *bias_g,
                       float **predictions_mini_batch)
 {
@@ -2927,16 +2934,16 @@ void make_predictions(float *datas, unsigned long int mini_batch_len,
     // Creating predictions
     //
 
-    for (unsigned long int i = 0; i < mini_batch_len; i++)
+    for (unsigned long long int i = 0; i < mini_batch_len; i++)
     {
-        for (unsigned long int j = 0; j < output_num; j++)
+        for (unsigned long long int j = 0; j < output_num; j++)
         {
             predictions_mini_batch[i][j] = 0.0;
         }
     }
 
     float iter_forward_temp = 0.0;
-    unsigned long int nthreads;
+    unsigned long long int nthreads;
 
     //++++++++++++++++++++++++++//
     //                          //
@@ -2945,7 +2952,7 @@ void make_predictions(float *datas, unsigned long int mini_batch_len,
     //++++++++++++++++++++++++++//
 
     float error_temp;
-    unsigned long int iter_f;
+    unsigned long long int iter_f;
     float error_iter;
 
     float *input_value = (float *)calloc(mini_batch_len * all_input_num, sizeof(float));
@@ -2965,8 +2972,8 @@ void make_predictions(float *datas, unsigned long int mini_batch_len,
 
     cudaMemcpy(datas_g, datas, sizeof(float) * mini_batch_len * (input_num + output_num), cudaMemcpyHostToDevice);
 
-    unsigned long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
-    unsigned long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
+    unsigned long long int grid_rows = (mini_batch_len + BLOCK_SIZE_X - 1) / BLOCK_SIZE_X; // mini_batch_len
+    unsigned long long int grid_cols = (all_input_num + BLOCK_SIZE_Y - 1) / BLOCK_SIZE_Y;  // neuron_num
     dim3 dimGrid(grid_rows, grid_cols);
     dim3 dimBlock(BLOCK_SIZE_X, BLOCK_SIZE_Y);
 
@@ -3012,24 +3019,26 @@ void make_predictions(float *datas, unsigned long int mini_batch_len,
 
         // Calculating the error
         // maxnormDiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
-        l1normdiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
+        //l1normdiff<<<(all_input_num * mini_batch_len + TPB - 1) / TPB, TPB>>>(input_value_old_g, input_value_g, all_input_num * mini_batch_len, error_iter_g);
 
-        cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(input_value, input_value_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
+        cudaMemcpy(input_value_old, input_value_old_g, sizeof(float) * mini_batch_len * all_input_num, cudaMemcpyDeviceToHost);
+
+        //cudaMemcpy(error_iter_c, error_iter_g, sizeof(float), cudaMemcpyDeviceToHost);
         cudaThreadSynchronize();
-
-        error_iter = error_iter_c[0];
+        error_iter = calc_diff_vectors(input_value, input_value_old, all_input_num * mini_batch_len);
     }
     cudaMemcpy(neuron_value, neuron_value_g, sizeof(float) * mini_batch_len * neuron_num, cudaMemcpyDeviceToHost);
     cudaThreadSynchronize();
 
     // Copying the predictions to predictions_mini_batch
-    for (unsigned long int data_index = 0; data_index < mini_batch_len; data_index++)
+    for (unsigned long long int data_index = 0; data_index < mini_batch_len; data_index++)
     {
         // Calculate the output
 
-        for (unsigned long int i = 0; i < output_num; i++)
+        for (unsigned long long int i = 0; i < output_num; i++)
         {
-            unsigned long int neuron_id = neuron_num - output_num + i;
+            unsigned long long int neuron_id = neuron_num - output_num + i;
             output_value[i] = neuron_value[data_index * neuron_num + neuron_id];
         }
 
@@ -3041,14 +3050,14 @@ void make_predictions(float *datas, unsigned long int mini_batch_len,
 
         if (strcmp(lossfunction_type, "bce_multilabeling") == 0)
         {
-            for (unsigned long int i = 0; i < output_num; i++)
+            for (unsigned long long int i = 0; i < output_num; i++)
             {
 
                 output_value[i] = act_fun(output_value[i], 1);
             }
         }
 
-        for (unsigned long int j = 0; j < output_num; j++)
+        for (unsigned long long int j = 0; j < output_num; j++)
         {
             predictions_mini_batch[data_index][j] = output_value[j];
         }
@@ -3072,19 +3081,19 @@ void make_predictions(float *datas, unsigned long int mini_batch_len,
 }
 
 void save_weight_bias(char filename[100], float *weight, float *bias,
-                      unsigned long int neuron_num, unsigned long int *neighbour_number, unsigned long int *bias_number,
+                      unsigned long long int neuron_num, unsigned long long int *neighbour_number, unsigned long long int *bias_number,
                       float *mt_weight, float *mth_weight, float *vt_weight, float *vth_weight, float *ut_weight,
                       float *mt_bias, float *mth_bias, float *vt_bias, float *vth_bias, float *ut_bias,
                       float adam_beta1t, float adam_beta2t,
-                      unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias)
+                      unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias)
 {
     FILE *f = fopen(filename, "w");
     if (f)
     {
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_neighbour[neuron_id];
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            unsigned long long int startind = first_ind_neighbour[neuron_id];
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
 
                 fprintf(f, "%f ", weight[startind + neighbour_ind]);
@@ -3092,10 +3101,10 @@ void save_weight_bias(char filename[100], float *weight, float *bias,
             fprintf(f, "\n");
         }
         fprintf(f, "\n");
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_bias[neuron_id];
-            for (unsigned long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
+            unsigned long long int startind = first_ind_bias[neuron_id];
+            for (unsigned long long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
             {
                 fprintf(f, "%f ", bias[startind + bias_ind]);
             }
@@ -3104,10 +3113,10 @@ void save_weight_bias(char filename[100], float *weight, float *bias,
         fprintf(f, "\n");
 
         // Optimizer parameters (on the weights and on the biases)
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_neighbour[neuron_id];
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            unsigned long long int startind = first_ind_neighbour[neuron_id];
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
                 float mt_temp = mt_weight[startind + neighbour_ind];
                 float mth_temp = mth_weight[startind + neighbour_ind];
@@ -3119,10 +3128,10 @@ void save_weight_bias(char filename[100], float *weight, float *bias,
             fprintf(f, "\n");
         }
         fprintf(f, "\n");
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_bias[neuron_id];
-            for (unsigned long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
+            unsigned long long int startind = first_ind_bias[neuron_id];
+            for (unsigned long long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
             {
                 float mt_temp = mt_bias[startind + bias_ind];
                 float mth_temp = mth_bias[startind + bias_ind];
@@ -3144,38 +3153,38 @@ void save_weight_bias(char filename[100], float *weight, float *bias,
 }
 
 void load_weight_bias(char filename[100], float *weight, float *bias,
-                      unsigned long int neuron_num, unsigned long int *neighbour_number, unsigned long int *bias_number,
+                      unsigned long long int neuron_num, unsigned long long int *neighbour_number, unsigned long long int *bias_number,
                       float *mt_weight, float *mth_weight, float *vt_weight, float *vth_weight, float *ut_weight,
                       float *mt_bias, float *mth_bias, float *vt_bias, float *vth_bias, float *ut_bias,
                       float adam_beta1t, float adam_beta2t,
-                      unsigned long int *first_ind_neighbour, unsigned long int *first_ind_bias)
+                      unsigned long long int *first_ind_neighbour, unsigned long long int *first_ind_bias)
 {
     FILE *f = fopen(filename, "r");
     if (f)
     {
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_neighbour[neuron_id];
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            unsigned long long int startind = first_ind_neighbour[neuron_id];
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
                 fscanf(f, "%f", &weight[startind + neighbour_ind]);
             }
         }
 
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_bias[neuron_id];
-            for (unsigned long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
+            unsigned long long int startind = first_ind_bias[neuron_id];
+            for (unsigned long long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
             {
                 fscanf(f, "%f ", &bias[startind + bias_ind]);
             }
         }
 
         // Optimizer parameters (on the weights and on the biases)
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_neighbour[neuron_id];
-            for (unsigned long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
+            unsigned long long int startind = first_ind_neighbour[neuron_id];
+            for (unsigned long long int neighbour_ind = 0; neighbour_ind < neighbour_number[neuron_id]; neighbour_ind++)
             {
                 float mt_temp;
                 float mth_temp;
@@ -3191,10 +3200,10 @@ void load_weight_bias(char filename[100], float *weight, float *bias,
             }
         }
 
-        for (unsigned long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
+        for (unsigned long long int neuron_id = 0; neuron_id < neuron_num; neuron_id++)
         {
-            unsigned long int startind = first_ind_bias[neuron_id];
-            for (unsigned long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
+            unsigned long long int startind = first_ind_bias[neuron_id];
+            for (unsigned long long int bias_ind = 0; bias_ind < bias_number[neuron_id]; bias_ind++)
             {
                 float mt_temp;
                 float mth_temp;
@@ -3233,3 +3242,45 @@ float dmax(float a, float b)
     }
 }
 
+float calc_vector_norm(float *v1, int row_nums)
+{
+    //
+    // Calculating the maximum norm of a vector
+    //
+    /*
+    float norm = 0.0;
+    for (int i = 0; i < row_nums; i++)
+    {
+        if (fabsf(v1[i]) > norm)
+        {
+            norm = fabsf(v1[i]);
+        }
+        // norm = norm > fabs(v1[i]) ? norm : fabs(v1[i]);
+    }
+    */
+
+    float norm = 0.0;
+#pragma omp parallel for reduction(max \
+                                   : norm)
+    for (int i = 0; i < row_nums; i++)
+    {
+        norm = norm > fabsf(v1[i]) ? norm : fabsf(v1[i]);
+    }
+    return norm;
+}
+
+float calc_diff_vectors(float *v1, float *v2, int row_nums)
+{
+    //
+    // Calculating the maximum norm of the difference of two vectors
+    //
+    float norm = 0.0;
+#pragma omp parallel for reduction(max \
+                                   : norm)
+    for (int i = 0; i < row_nums; i++)
+    {
+        norm = norm > fabsf(v1[i] - v2[i]) ? norm : fabsf(v1[i] - v2[i]);
+    }
+
+    return norm;
+}

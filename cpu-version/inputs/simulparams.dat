@@ -1,7 +1,7 @@
 seed                11
 thread_num          4
 tol_fixit           1.0e-6
-maxiter_grad        50
+maxiter_grad        100
 maxiter_fix         10000
 initdx              1.0
 sfreq               1

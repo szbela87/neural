@@ -41,7 +41,7 @@ a short user manual for the program as well.
 **TODO**
 * Convolutional networks (the cpu-version can handle weight sharing) by python scripts
 * Sequential architectures (i.e. LSTM, GRU)
-* Applying the results for loseless compression
+* Applying the results for lossless compression
 * Genetic approach with Bayesian optimization for dynamic network structures
 * Writing Python wrappers
 * Creating Documentation webpage

@@ -1,5 +1,5 @@
 FC = nvcc
-FFLAGS = -O3 -lm  
+FFLAGS = -Xcompiler -fopenmp -O3 -use_fast_math 
 
 all: neural
 
