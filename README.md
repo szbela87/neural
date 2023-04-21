@@ -1,4 +1,4 @@
-# Implicit Hypergraph Neural Networks
+# Implicit Neural Networks
 
 This repository contains my thesis work for the `Mathematics Expert in Data Analytics and Machine Learning
 postgraduate specialization program` of ELTE TTK (Budapest, Hungary).
@@ -35,14 +35,10 @@ a short user manual for the program as well.
 * 31/05/22 CPU code for validating the GPU code
 * 15/06/22 GPU code
 
-**In progress**
-* 26/05/22 Most of the GPU kernels are ready (not published yet)
-
 **TODO**
 * Convolutional networks (the cpu-version can handle weight sharing) by python scripts
 * Sequential architectures (i.e. LSTM, GRU)
 * Applying the results for lossless compression
-* Genetic approach with Bayesian optimization for dynamic network structures
 * Writing Python wrappers
 * Creating Documentation webpage
 * Creating Tutorials
